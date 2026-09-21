@@ -30,6 +30,8 @@ let vuJusqua = store.get('vuJusqua', new Date(Date.now() - 864e5).toISOString())
 let onglet = 'nouveautes';
 let limite = 30;
 let ranked = [];
+let profil = store.get('profil', {});
+let config = {}; // docs/config.json : { contactEmail, alertEmail } facultatifs
 
 // --- Critères : formulaire <-> objet --------------------------------------
 const ETATS = ['neutre', 'pref', 'exclu'];
@@ -297,6 +299,118 @@ function brancher() {
   });
 }
 
+
+// --- Ma recherche en détail : questionnaire, récapitulatif à envoyer, alertes e-mail ---
+const CHAMPS_PROFIL = [
+  ['redhibitoires', 'Ce que je ne veux absolument pas', 'textarea', 'Ex. : rez-de-chaussée sur cour, 5e étage sans ascenseur, cuisine ouverte…'],
+  ['quartiers', 'Quartiers ou rues que j\'aime / que j\'évite, et pourquoi', 'textarea', ''],
+  ['trajet', 'Mon trajet quotidien (lieu de travail ou d\'études, durée maximale)', 'text', ''],
+  ['emmenagement', 'Date d\'emménagement souhaitée et durée prévue', 'text', ''],
+  ['occupants', 'Nombre d\'occupants', 'text', ''],
+  ['animaux', 'Animaux', 'text', ''],
+  ['garant', 'Dossier : garant, Visale, revenus (facultatif)', 'text', ''],
+  ['budgetPerle', 'Budget maximal exceptionnel pour un vrai coup de cœur (€)', 'number', ''],
+  ['remarques', 'Autre chose à savoir', 'textarea', ''],
+];
+
+function recapTexte() {
+  const c = criteria;
+  const nom = Object.fromEntries(CRITERES);
+  const pref = c.arrondissementsPref;
+  const exclus = c.arrondissements.length ? Array.from({ length: 20 }, (_, i) => i + 1).filter((i) => !c.arrondissements.includes(i)) : [];
+  const niveau = (min, max) => CRITERES.filter(([k]) => c.poids[k] >= min && c.poids[k] <= max).map(([k]) => `${nom[k]} (${c.poids[k]}/5)`);
+  const ligne = (t, v) => (v && String(v).trim() ? `- ${t} : ${String(v).trim()}` : null);
+  const perle = profil.budgetPerle ? ` (jusqu'à ${eur(profil.budgetPerle)} pour un coup de cœur)` : '';
+  const l = [
+    "MA RECHERCHE D'APPART À PARIS",
+    '',
+    'CRITÈRES CHIFFRÉS',
+    `- Budget max : ${eur(c.budgetMax)} charges comprises${perle}`,
+    `- Surface min : ${c.surfaceMin} m² · ${c.piecesMin} pièce(s) min · meublé : ${{ indifferent: 'peu importe', oui: 'oui', non: 'non' }[c.meuble]}`,
+    `- Arrondissements préférés : ${pref.length ? pref.map((i) => `${i}e`).join(', ') : 'aucun en particulier'}`,
+    `- Arrondissements exclus : ${exclus.length ? exclus.map((i) => `${i}e`).join(', ') : 'aucun'}`,
+    `- Écartées automatiquement : ${[c.exclure.rdc && 'rez-de-chaussée', c.exclure.dpeFG && 'DPE F/G', c.exclure.coloc && 'colocation'].filter(Boolean).join(', ') || 'rien'}`,
+    `- Essentiel (4-5) : ${niveau(4, 5).join(', ') || '—'}`,
+    `- Important (2-3) : ${niveau(2, 3).join(', ') || '—'}`,
+    `- Bonus (1) : ${niveau(1, 1).join(', ') || '—'}`,
+    `- Indifférent (0) : ${niveau(0, 0).join(', ') || '—'}`,
+    `- Alerte Telegram : ${c.alerteActive ? `oui, à partir de ${c.alerteScoreMin}/100` : 'non'}`,
+    '',
+    'EN CLAIR',
+    ...CHAMPS_PROFIL.filter(([k]) => k !== 'budgetPerle').map(([k, label]) => ligne(label, profil[k])).filter(Boolean),
+  ];
+  if (l.at(-1) === 'EN CLAIR') l.push('(rien de renseigné)');
+  l.push('', '--- pour le bot (docs/criteria.json) ---', JSON.stringify(c));
+  return l.join('\n');
+}
+
+function dessinerProfil() {
+  $('#profil-champs').innerHTML = CHAMPS_PROFIL.map(([k, label, type, ph]) => {
+    const v = esc(profil[k] ?? '');
+    const champ = type === 'textarea' ? `<textarea rows="3" data-profil="${k}" placeholder="${esc(ph)}">${v}</textarea>` : `<input type="${type}" data-profil="${k}" value="${v}" placeholder="${esc(ph)}">`;
+    return `<label>${esc(label)}${champ}</label>`;
+  }).join('');
+  majRecap();
+}
+
+function majRecap() {
+  const texte = recapTexte();
+  $('#recap').value = texte;
+  const mail = $('#btn-mail');
+  if (config.contactEmail) {
+    mail.hidden = false;
+    // Le corps d'un mailto: est limité en taille : on n'y met que la partie lisible, sans le JSON.
+    mail.href = `mailto:${encodeURIComponent(config.contactEmail)}?subject=${encodeURIComponent("Ma recherche d'appart")}&body=${encodeURIComponent(texte.split('\n--- pour le bot')[0])}`;
+  }
+  dessinerAlertes();
+}
+
+function dessinerAlertes() {
+  const c = criteria;
+  const adresse = config.alertEmail ? `<strong>${esc(config.alertEmail)}</strong>` : "l'adresse dédiée que Sacha t'a donnée";
+  const zone = `Paris · ≤ ${eur(c.budgetMax)} · ≥ ${c.surfaceMin} m² · ${c.piecesMin} pièce(s) et plus`;
+  const pap = `https://www.pap.fr/annonce/location-appartement-paris-75-g439-jusqu-a-${c.budgetMax}-euros-a-partir-de-${c.surfaceMin}-m2-a-partir-de-${c.piecesMin}-pieces`;
+  const etapes = (liste) => `<ol>${liste.map((e) => `<li>${e}</li>`).join('')}</ol>`;
+  $('#alertes').innerHTML = `
+    <p class="hint">Sur chaque site, crée une alerte avec ${adresse}. Ne mets que l'indispensable : ${zone}. Ce site fait ensuite le tri fin avec tes préférences, donc mieux vaut une alerte un peu large.</p>
+    <div class="site-card"><h4>PAP <span class="hint">(particuliers, sans frais d'agence)</span></h4>
+      ${etapes(['Ouvre la recherche déjà préfiltrée ci-dessous.', 'Clique sur « Créer une alerte e-mail » et saisis l\'adresse dédiée.'])}
+      <a class="btn" href="${esc(pap)}" target="_blank" rel="noopener noreferrer">Ouvrir la recherche PAP ↗</a></div>
+    <div class="site-card"><h4>SeLoger</h4>
+      ${etapes(['Ouvre SeLoger, choisis Louer → Appartement → Paris.', `Règle le budget max (${eur(c.budgetMax)}), la surface min (${c.surfaceMin} m²) et les pièces.`, 'Clique sur « Créer une alerte » (compte gratuit).'])}
+      <a class="btn" href="https://www.seloger.com/" target="_blank" rel="noopener noreferrer">Ouvrir SeLoger ↗</a></div>
+    <div class="site-card"><h4>Leboncoin</h4>
+      ${etapes(['Ouvre Leboncoin → Locations → Paris.', `Règle le prix max (${eur(c.budgetMax)}), la surface min (${c.surfaceMin} m²) et les pièces.`, 'Clique sur « Sauvegarder la recherche » et active l\'alerte e-mail.'])}
+      <a class="btn" href="https://www.leboncoin.fr/" target="_blank" rel="noopener noreferrer">Ouvrir Leboncoin ↗</a></div>`;
+}
+
+async function copierRecap() {
+  const texte = $('#recap').value;
+  try { await navigator.clipboard.writeText(texte); }
+  catch { $('#recap').select(); document.execCommand('copy'); }
+  $('#recap-etat').textContent = 'Copié. Colle-le dans un message à Sacha.';
+}
+
+function brancherProfil() {
+  $('#btn-profil').addEventListener('click', () => { dessinerProfil(); $('#dlg-profil').showModal(); });
+  $('#profil-close').addEventListener('click', () => $('#dlg-profil').close());
+  $('#profil-champs').addEventListener('input', (e) => {
+    const k = e.target.dataset.profil;
+    if (!k) return;
+    profil[k] = e.target.value;
+    store.set('profil', profil);
+    majRecap();
+  });
+  $('#btn-copy').addEventListener('click', copierRecap);
+  if (navigator.share) {
+    $('#btn-share').hidden = false;
+    $('#btn-share').addEventListener('click', async () => {
+      try { await navigator.share({ title: "Ma recherche d'appart", text: $('#recap').value }); $('#recap-etat').textContent = 'Envoyé.'; }
+      catch (e) { if (e.name !== 'AbortError') copierRecap(); }
+    });
+  }
+}
+
 async function demarrer() {
   // Large écran : panneau toujours ouvert (son titre est masqué). Mobile : replié pour laisser place aux annonces.
   const large = matchMedia('(min-width: 900px)');
@@ -305,6 +419,8 @@ async function demarrer() {
   large.addEventListener('change', ajuster);
   remplirFormulaire();
   brancher();
+  brancherProfil();
+  fetch('config.json').then((r) => (r.ok ? r.json() : {})).then((c) => { config = c || {}; }).catch(() => {});
   try {
     const [d, c] = await Promise.all([
       fetch(`data/listings.json?t=${Date.now()}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }),

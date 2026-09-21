@@ -52,6 +52,15 @@ Le site classe déjà avec les critères réglés dans le navigateur. Pour que l
   puis « Enregistrer pour le bot ». Le jeton reste dans le navigateur. **Cette fonction n'a pas été testée contre l'API GitHub réelle.**
 - À la main : éditer `docs/criteria.json`.
 
+### « Ma recherche en détail » (retour de Tabatha vers Sacha)
+
+Le bouton du même nom ouvre un questionnaire libre (rédhibitoires, quartiers, trajet, dates, budget « coup de cœur »…). Il génère un
+récapitulatif texte = critères chiffrés + réponses + JSON prêt à coller dans `docs/criteria.json`. Elle l'envoie via le bouton de
+partage du téléphone (WhatsApp, iMessage…) ou le bouton « Copier ». Réponses stockées uniquement dans son navigateur.
+
+`docs/config.json` (facultatif) : `contactEmail` ajoute un bouton « Envoyer par e-mail » ; `alertEmail` affiche l'adresse dédiée
+dans l'assistant d'alertes. Ces deux valeurs sont **publiques** (dépôt public) : ne les renseigne que si tu l'acceptes.
+
 ## Utilisation locale
 
 ```bash

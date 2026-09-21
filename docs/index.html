@@ -17,6 +17,7 @@
       <p class="sub" id="maj">Chargement…</p>
     </div>
     <div class="top-actions">
+      <button class="btn primary" id="btn-profil">Ma recherche en détail</button>
       <button class="btn" id="btn-add">+ Ajouter une annonce</button>
       <button class="btn ghost" id="btn-settings" title="Réglages de synchronisation" aria-label="Réglages">⚙</button>
     </div>
@@ -115,6 +116,29 @@
       <label>Jeton GitHub <input name="token" type="password" autocomplete="off" placeholder="github_pat_…"></label>
       <div class="dlg-actions"><button class="btn ghost" value="cancel" formnovalidate>Fermer</button><button class="btn primary" value="ok">Enregistrer</button></div>
     </form>
+  </dialog>
+
+  <dialog id="dlg-profil">
+    <div class="dlg wide">
+      <div class="dlg-head"><h2>Ma recherche en détail</h2><button class="btn ghost small" id="profil-close" type="button">Fermer</button></div>
+      <p class="hint">Réponds comme tu veux, même en quelques mots. Tout est enregistré sur cet appareil, et rien n'est envoyé tant que tu n'as pas appuyé sur le bouton d'envoi.</p>
+
+      <h3>1. Ce que je veux vraiment</h3>
+      <div id="profil-champs" class="profil-champs"></div>
+
+      <h3>2. Le récapitulatif</h3>
+      <p class="hint">Il reprend les critères réglés sur la page, plus tes réponses ci-dessus.</p>
+      <textarea id="recap" readonly rows="12" aria-label="Récapitulatif de ma recherche"></textarea>
+      <div class="dlg-actions">
+        <a class="btn" id="btn-mail" hidden>Envoyer par e-mail</a>
+        <button class="btn" id="btn-copy" type="button">Copier</button>
+        <button class="btn primary" id="btn-share" type="button" hidden>Envoyer à Sacha</button>
+      </div>
+      <p class="hint" id="recap-etat" role="status"></p>
+
+      <h3>3. Mes alertes e-mail sur les autres sites</h3>
+      <div id="alertes"></div>
+    </div>
   </dialog>
 
   <script type="module" src="app.js"></script>
