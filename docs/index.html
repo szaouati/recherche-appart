@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Mon appart à Paris</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Mon appart à Paris</h1>
+      <p class="sub" id="maj">Chargement…</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn" id="btn-add">+ Ajouter une annonce</button>
+      <button class="btn ghost" id="btn-settings" title="Réglages de synchronisation" aria-label="Réglages">⚙</button>
+    </div>
+  </header>
+
+  <div id="banniere" class="banniere" hidden></div>
+
+  <main class="layout">
+    <details id="criteres" class="panel" open>
+      <summary>Mes critères <span id="resume-criteres"></span></summary>
+
+      <section>
+        <h2>Indispensable</h2>
+        <label class="field">Budget max <output id="o-budget"></output>
+          <input type="range" id="budgetMax" min="600" max="3500" step="50"></label>
+        <label class="field">Surface minimum <output id="o-surface"></output>
+          <input type="range" id="surfaceMin" min="9" max="100" step="1"></label>
+        <label class="field">Pièces minimum
+          <select id="piecesMin"><option value="1">1 (studio)</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
+        <fieldset class="seg" id="meuble"><legend>Meublé</legend>
+          <label><input type="radio" name="meuble" value="indifferent"> Peu importe</label>
+          <label><input type="radio" name="meuble" value="oui"> Oui</label>
+          <label><input type="radio" name="meuble" value="non"> Non</label>
+        </fieldset>
+        <fieldset class="checks"><legend>Écarter automatiquement</legend>
+          <label><input type="checkbox" id="ex-rdc"> Rez-de-chaussée</label>
+          <label><input type="checkbox" id="ex-dpeFG"> DPE F ou G</label>
+          <label><input type="checkbox" id="ex-coloc"> Colocation / sous-location</label>
+        </fieldset>
+      </section>
+
+      <section>
+        <h2>Arrondissements</h2>
+        <p class="hint">Un clic : ★ préféré. Deux clics : ✕ exclu. Trois : neutre.</p>
+        <div id="arr-grid" class="arr-grid"></div>
+      </section>
+
+      <details class="poids">
+        <summary>Ce qui compte pour moi <span class="hint">(0 = indifférent, 5 = essentiel)</span></summary>
+        <div id="poids-list"></div>
+      </details>
+
+      <section>
+        <h2>Alerte Telegram</h2>
+        <label class="field check"><input type="checkbox" id="alerteActive"> Me prévenir des nouvelles annonces</label>
+        <label class="field">Seulement si le score est au moins de <output id="o-alerte"></output>
+          <input type="range" id="alerteScoreMin" min="40" max="95" step="1"></label>
+      </section>
+
+      <section class="sync">
+        <button class="btn primary" id="btn-sync">Enregistrer pour le bot</button>
+        <p class="hint" id="sync-etat">Le site classe déjà les annonces avec ces critères. Pour que le bot les utilise aussi pour les alertes, enregistre-les.</p>
+      </section>
+    </details>
+
+    <section id="resultats" aria-live="polite">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="toolbar">
+        <span id="compte" class="hint"></span>
+        <button class="btn ghost small" id="btn-vu" hidden>Tout marquer comme vu</button>
+      </div>
+      <ul class="cards" id="liste"></ul>
+      <button class="btn more" id="btn-more" hidden>Afficher plus</button>
+      <footer class="sources" id="sources"></footer>
+    </section>
+  </main>
+
+  <dialog id="dlg-add">
+    <form method="dialog" id="form-add" class="dlg">
+      <h2>Ajouter une annonce à la main</h2>
+      <p class="hint">Pour une annonce vue ailleurs (Facebook, bouche-à-oreille, autre site). Elle est notée comme les autres.</p>
+      <label>Lien <input name="url" type="url" required placeholder="https://…"></label>
+      <label>Titre <input name="title" placeholder="Ex. 2 pièces rue Oberkampf"></label>
+      <div class="grid2">
+        <label>Loyer charges comprises (€) <input name="price" type="number" min="0" required></label>
+        <label>Surface (m²) <input name="surface" type="number" min="0" step="0.1"></label>
+        <label>Pièces <input name="rooms" type="number" min="1" max="8"></label>
+        <label>Arrondissement <input name="arrondissement" type="number" min="1" max="20"></label>
+        <label>Étage <input name="floor" type="number" min="0" max="30"></label>
+        <label>DPE <select name="dpe"><option value="">?</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option></select></label>
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" name="elevator"> Ascenseur</label>
+        <label><input type="checkbox" name="balcon"> Balcon / terrasse</label>
+      </div>
+      <div class="dlg-actions"><button class="btn ghost" value="cancel" formnovalidate>Annuler</button><button class="btn primary" value="ok">Ajouter</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-settings">
+    <form method="dialog" id="form-settings" class="dlg">
+      <h2>Synchronisation avec le bot</h2>
+      <p class="hint">Pour enregistrer les critères depuis ce site, il faut un jeton GitHub limité à ce seul dépôt (permission « Contents : lecture et écriture »). Il reste dans ce navigateur, uniquement.</p>
+      <label>Dépôt <input name="repo" placeholder="proprietaire/nom-du-depot" required></label>
+      <label>Branche <input name="branch" value="main" required></label>
+      <label>Jeton GitHub <input name="token" type="password" autocomplete="off" placeholder="github_pat_…"></label>
+      <div class="dlg-actions"><button class="btn ghost" value="cancel" formnovalidate>Fermer</button><button class="btn primary" value="ok">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

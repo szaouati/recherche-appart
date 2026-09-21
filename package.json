@@ -1,0 +1,12 @@
+{
+  "name": "recherche-appart",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "collecte": "node collector/collect.mjs",
+    "collecte:rapide": "node collector/collect.mjs --quick",
+    "simulation": "node collector/collect.mjs --dry",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": { "node": ">=20" }
+}

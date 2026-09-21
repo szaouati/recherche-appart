@@ -1,0 +1,47 @@
+name: Collecte des annonces
+
+on:
+  schedule:
+    # Passage rapide (annonces les plus récentes) toutes les 30 min, de ~7h à ~23h heure de Paris.
+    - cron: '*/30 5-21 * * *'
+    # Collecte complète (prix, annonces retirées) une fois par nuit.
+    - cron: '20 3 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'quick = nouveautés seulement, full = tout'
+        default: 'full'
+        type: choice
+        options: [quick, full]
+
+permissions:
+  contents: write
+
+# Un seul passage à la fois : évite deux commits concurrents sur listings.json.
+concurrency:
+  group: collecte
+  cancel-in-progress: false
+
+jobs:
+  collecte:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Collecte + alertes
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          MODE: ${{ github.event.inputs.mode || (github.event.schedule == '20 3 * * *' && 'full' || 'quick') }}
+        run: |
+          if [ "$MODE" = "quick" ]; then node collector/collect.mjs --quick; else node collector/collect.mjs; fi
+      - name: Publier les données
+        run: |
+          git config user.name "annonces-bot"
+          git config user.email "annonces-bot@users.noreply.github.com"
+          git add docs/data
+          git diff --cached --quiet || (git commit -m "Collecte $(date -u +%Y-%m-%dT%H:%MZ)" && git pull --rebase -q && git push)
