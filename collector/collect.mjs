@@ -50,6 +50,11 @@ const readJson = async (file, fallback) => {
 };
 
 async function main() {
+  if (args.includes('--test-telegram')) {
+    if (!telegramConfigured()) throw new Error('TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID manquants');
+    await sendTelegram(`✅ Le bot fonctionne. Les bonnes annonces arriveront ici.\n${process.env.SITE_URL || ''}`);
+    return console.log('Message de test envoyé.');
+  }
   const now = new Date();
   const nowIso = now.toISOString();
   const criteria = mergeCriteria(await readJson(CRITERIA_FILE, {}));

@@ -9,10 +9,10 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'quick = nouveautés seulement, full = tout'
+        description: 'quick = nouveautés, full = tout, test-telegram = envoie un message de test'
         default: 'full'
         type: choice
-        options: [quick, full]
+        options: [quick, full, test-telegram]
 
 permissions:
   contents: write
@@ -38,7 +38,11 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL }}
           MODE: ${{ github.event.inputs.mode || (github.event.schedule == '20 3 * * *' && 'full' || 'quick') }}
         run: |
-          if [ "$MODE" = "quick" ]; then node collector/collect.mjs --quick; else node collector/collect.mjs; fi
+          case "$MODE" in
+            quick) node collector/collect.mjs --quick ;;
+            test-telegram) node collector/collect.mjs --test-telegram ;;
+            *) node collector/collect.mjs ;;
+          esac
       - name: Publier les données
         run: |
           git config user.name "annonces-bot"
