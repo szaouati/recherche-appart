@@ -2,3 +2,5 @@ node_modules/
 .DS_Store
 samples/
 *.eml
+worker/.dev.vars
+worker/.wrangler/

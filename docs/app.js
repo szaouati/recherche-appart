@@ -427,6 +427,104 @@ function brancherProfil() {
   }
 }
 
+// --- Bot Claude : ajuster les critères en discutant --------------------------
+let botChat = store.get('botChat', []); // [{role:'user'|'assistant', content}]
+let botEnvoi = false;
+let derniereProposition = null;
+
+function dessinerBotLog() {
+  const log = $('#bot-log');
+  log.innerHTML = botChat.length
+    ? botChat.map((m) => `<div class="bot-msg ${m.role === 'user' ? 'user' : 'bot'}">${esc(m.content)}</div>`).join('')
+    : '<p class="hint">Dis-moi ce que tu veux changer : « baisse le budget à 850 », « ajoute le 19e en préféré », « le parquet ne compte plus »…</p>';
+  log.scrollTop = log.scrollHeight;
+}
+
+function diffCriteria(actuel, propose) {
+  const nom = Object.fromEntries(CRITERES);
+  const lignes = [];
+  const cmp = (label, a, b) => { if (JSON.stringify(a) !== JSON.stringify(b)) lignes.push(`${label} : ${a} → ${b}`); };
+  cmp('Budget max', eur(actuel.budgetMax), eur(propose.budgetMax));
+  cmp('Surface min', `${actuel.surfaceMin} m²`, `${propose.surfaceMin} m²`);
+  cmp('Pièces min', actuel.piecesMin, propose.piecesMin);
+  cmp('Arrondissements', actuel.arrondissements.join(', ') || 'tout Paris', propose.arrondissements.join(', ') || 'tout Paris');
+  cmp('Préférés', actuel.arrondissementsPref.join(', ') || '—', propose.arrondissementsPref.join(', ') || '—');
+  cmp('Meublé', actuel.meuble, propose.meuble);
+  for (const k of ['rdc', 'dpeFG', 'coloc']) cmp(`Écarter ${k}`, actuel.exclure[k], propose.exclure[k]);
+  for (const [k, label] of CRITERES) if (actuel.poids[k] !== propose.poids[k]) lignes.push(`${label} : ${actuel.poids[k]}/5 → ${propose.poids[k]}/5`);
+  cmp('Alerte active', actuel.alerteActive, propose.alerteActive);
+  cmp('Seuil alerte', actuel.alerteScoreMin, propose.alerteScoreMin);
+  return lignes;
+}
+
+function afficherProposition(p) {
+  const diff = diffCriteria(criteria, p);
+  const box = $('#bot-proposal');
+  if (!diff.length) { box.hidden = true; return; }
+  derniereProposition = p;
+  box.hidden = false;
+  box.innerHTML = `<h4>Claude te propose :</h4><ul>${diff.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
+    <div class="dlg-actions"><button class="btn ghost small" id="bot-ignorer" type="button">Ignorer</button><button class="btn primary small" id="bot-appliquer" type="button">Appliquer</button></div>`;
+  $('#bot-ignorer').addEventListener('click', () => { box.hidden = true; derniereProposition = null; });
+  $('#bot-appliquer').addEventListener('click', async () => {
+    criteria = mergeCriteria(p);
+    store.set('criteria', criteria);
+    remplirFormulaire();
+    limite = 30;
+    render();
+    box.hidden = true;
+    const r2 = reglages();
+    if (r2.repo && r2.token) {
+      $('#bot-etat').textContent = 'Appliqué sur le site. Envoi au bot…';
+      await synchroniser();
+    } else {
+      $('#bot-etat').textContent = "Appliqué sur ce site. Ouvre ⚙ pour l'envoyer aussi au bot des alertes.";
+    }
+  });
+}
+
+async function envoyerBot(message) {
+  if (!config.botUrl || !config.botToken) { $('#bot-etat').textContent = "Le bot n'est pas encore configuré (docs/config.json)."; return; }
+  botChat.push({ role: 'user', content: message });
+  store.set('botChat', botChat.slice(-24));
+  dessinerBotLog();
+  botEnvoi = true;
+  $('#bot-etat').textContent = 'Claude réfléchit…';
+  try {
+    const res = await fetch(config.botUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-App-Token': config.botToken },
+      body: JSON.stringify({ message, history: botChat.slice(-12), criteria }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    botChat.push({ role: 'assistant', content: data.reply || '…' });
+    store.set('botChat', botChat.slice(-24));
+    dessinerBotLog();
+    $('#bot-etat').textContent = '';
+    if (data.proposal) afficherProposition(data.proposal);
+  } catch (e) {
+    dessinerBotLog();
+    $('#bot-etat').textContent = `Erreur : ${e.message}`;
+  } finally {
+    botEnvoi = false;
+  }
+}
+
+function brancherBot() {
+  $('#btn-bot').addEventListener('click', () => { dessinerBotLog(); $('#dlg-bot').showModal(); $('#bot-input').focus(); });
+  $('#bot-close').addEventListener('click', () => $('#dlg-bot').close());
+  $('#bot-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (botEnvoi) return;
+    const ta = $('#bot-input');
+    const msg = ta.value.trim();
+    if (!msg) return;
+    ta.value = '';
+    envoyerBot(msg);
+  });
+}
+
 async function demarrer() {
   // Large écran : panneau toujours ouvert (son titre est masqué). Mobile : replié pour laisser place aux annonces.
   const large = matchMedia('(min-width: 900px)');
@@ -436,6 +534,7 @@ async function demarrer() {
   remplirFormulaire();
   brancher();
   brancherProfil();
+  brancherBot();
   fetch('config.json').then((r) => (r.ok ? r.json() : {})).then((c) => { config = c || {}; }).catch(() => {});
   try {
     const [d, c] = await Promise.all([

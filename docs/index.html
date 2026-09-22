@@ -18,6 +18,7 @@
       <p class="sub statut" id="statut-recherche"></p>
     </div>
     <div class="top-actions">
+      <button class="btn primary" id="btn-bot">Demander à Claude</button>
       <button class="btn primary" id="btn-profil">Ma recherche en détail</button>
       <button class="btn" id="btn-add">+ Ajouter une annonce</button>
       <button class="btn ghost" id="btn-settings" title="Réglages de synchronisation" aria-label="Réglages">⚙</button>
@@ -139,6 +140,20 @@
 
       <h3>3. Mes alertes e-mail sur les autres sites</h3>
       <div id="alertes"></div>
+    </div>
+  </dialog>
+
+  <dialog id="dlg-bot">
+    <div class="dlg wide bot-dlg">
+      <div class="dlg-head"><h2>Demander à Claude</h2><button class="btn ghost small" id="bot-close" type="button">Fermer</button></div>
+      <p class="hint">Pour ajuster tes critères en discutant. Il ne fait que ça ici : pour le reste, écris à Sacha.</p>
+      <div id="bot-log" class="bot-log" aria-live="polite"></div>
+      <div id="bot-proposal" class="bot-proposal" hidden></div>
+      <form id="bot-form" class="bot-form">
+        <textarea id="bot-input" rows="1" placeholder="Écris ton message…" required></textarea>
+        <button class="btn primary" type="submit">Envoyer</button>
+      </form>
+      <p class="hint" id="bot-etat" role="status"></p>
     </div>
   </dialog>
 
