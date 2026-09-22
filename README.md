@@ -49,8 +49,12 @@ Le site classe déjà avec les critères réglés dans le navigateur. Pour que l
 être dans `docs/criteria.json`. Deux façons :
 
 - Depuis le site : ⚙ → dépôt + jeton GitHub (fine-grained, limité à ce dépôt, permission *Contents: read & write*),
-  puis « Enregistrer pour le bot ». Le jeton reste dans le navigateur. **Cette fonction n'a pas été testée contre l'API GitHub réelle.**
+  puis « Enregistrer pour le bot ». Le jeton reste dans le navigateur. Mécanisme (lecture du sha, écriture,
+  mise à jour, suppression) **testé le 22/09/2026 directement contre l'API GitHub réelle**, sur un fichier
+  jetable — fonctionne comme prévu.
 - À la main : éditer `docs/criteria.json`.
+- Automatiquement quand elle valide une proposition du bot Claude (ci-dessous), si la synchronisation est
+  déjà configurée dans ⚙ ; sinon le message le lui rappelle.
 
 ### « Ma recherche en détail » (retour de Tabatha vers Sacha)
 
@@ -60,6 +64,40 @@ partage du téléphone (WhatsApp, iMessage…) ou le bouton « Copier ». Répon
 
 `docs/config.json` (facultatif) : `contactEmail` ajoute un bouton « Envoyer par e-mail » ; `alertEmail` affiche l'adresse dédiée
 dans l'assistant d'alertes. Ces deux valeurs sont **publiques** (dépôt public) : ne les renseigne que si tu l'acceptes.
+
+### Bot Claude (« Demander à Claude »)
+
+Un widget de chat dans le site : Tabatha discute pour ajuster ses critères, Claude répond et — si elle demande clairement
+un changement — propose un nouveau réglage complet (diff affiché : « Budget max : 900 € → 850 € »). Elle valide d'un tap ;
+ça s'applique sur le site, et si la synchronisation (⚙) est déjà configurée, ça part aussi vers `docs/criteria.json`.
+
+**Architecture** — le site est public et statique (GitHub Pages) : une clé Anthropic posée dedans serait lisible par
+n'importe qui. Elle reste donc côté serveur, dans un petit **Worker Cloudflare** (`worker/`) qui sert de relais :
+```
+Site (navigateur) → Worker Cloudflare (clé Claude en secret) → API Anthropic
+                        └─ valide/clampe la proposition avant de la renvoyer
+```
+- Modèle : `claude-haiku-4-5-20251001`, appelé avec un outil (`tool use`) `propose_criteria` dont le schéma vient de
+  `docs/score.mjs` (`CRITERES`) — pas de duplication.
+- Protections : CORS restreint à l'origine du site, jeton `APP_TOKEN` (non sensible, juste pour filtrer les robots),
+  limite de débit **20 requêtes/min par IP** (binding `ratelimit` Cloudflare), prompt qui cantonne le sujet à cette
+  appli, et **reclamping serveur** de tout ce que le modèle renvoie (bornes numériques, énumérations) avant de le
+  transmettre au navigateur — jamais de confiance aveugle dans la sortie du modèle.
+- Testé le 22/09/2026 en conditions réelles : changement de critère bien interprété (budget vs préférence
+  d'arrondissement distingués), question simple sans proposition, refus poli d'une demande hors sujet.
+
+**Déploiement / maintenance** (`worker/`) :
+```bash
+cd worker
+npx wrangler login                          # une fois, ouvre le navigateur (compte Cloudflare)
+npx wrangler deploy                         # publie/republie le Worker
+npx wrangler secret put ANTHROPIC_API_KEY   # colle la clé quand demandé — jamais ailleurs
+npx wrangler secret list                    # vérifie qu'il existe, sans jamais l'afficher
+npx wrangler tail                           # logs en direct, utile en cas de souci
+```
+Après un premier déploiement, reporter l'URL affichée dans `docs/config.json` (`botUrl`). `botToken` doit être identique
+à `APP_TOKEN` dans `worker/wrangler.jsonc`. Coût : gratuit à ce volume (palier gratuit Workers + rate limiting), seul
+l'usage de l'API Anthropic est facturé à Sacha (modèle Haiku, conversations courtes → quelques centimes au pire).
 
 ## Utilisation locale
 
