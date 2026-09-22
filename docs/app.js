@@ -185,6 +185,7 @@ function carte(l) {
 
 function render() {
   calculer();
+  $('#statut-recherche').textContent = statutRecherche();
   dessinerOnglets();
   const liste = filtrer();
   $('#compte').textContent = `${liste.length} annonce${liste.length > 1 ? 's' : ''}`;
@@ -198,6 +199,21 @@ function dessinerSources() {
   const pills = (meta.sources || []).map((s) => `<span class="pill ${esc(s.status)}" title="${esc(s.error ?? '')}">${esc(s.name)} · ${s.status === 'erreur' ? 'en panne' : `${s.count} annonces`}</span>`);
   pills.push('<span class="pill todo" title="Alertes e-mail PAP / SeLoger / Leboncoin : à brancher">PAP, SeLoger, Leboncoin · via alertes e-mail (à venir)</span>');
   $('#sources').innerHTML = pills.join('');
+}
+
+function statutRecherche() {
+  const c = criteria;
+  const ok = ranked.filter((l) => l.ok);
+  const nouvelles = ok.filter((l) => l.first_seen > vuJusqua && statut[l.id] !== 'ecarte').length;
+  const zone = c.arrondissements.length === 1 ? `le ${c.arrondissements[0]}e` : c.arrondissements.length ? `${c.arrondissements.length} arrondissements` : 'tout Paris';
+  const meilleure = ok.find((l) => statut[l.id] !== 'ecarte');
+  const bits = [
+    `Recherche : ${zone} · ≤ ${eur(c.budgetMax)} · ${c.surfaceMin} m²+`,
+    `${ok.length} annonce${ok.length > 1 ? 's' : ''} correspond${ok.length > 1 ? 'ent' : ''} en ce moment`,
+    nouvelles ? `${nouvelles} nouvelle${nouvelles > 1 ? 's' : ''} depuis ta dernière visite` : 'rien de nouveau depuis ta dernière visite',
+    meilleure ? `meilleure trouvaille : ${meilleure.score}/100 à ${eur(meilleure.price)}` : null,
+  ].filter(Boolean);
+  return bits.join(' · ');
 }
 
 function entete() {
