@@ -1,9 +1,9 @@
 {
-  "budgetMax": 1500,
-  "surfaceMin": 30,
-  "piecesMin": 2,
-  "arrondissements": [],
-  "arrondissementsPref": [],
+  "budgetMax": 900,
+  "surfaceMin": 10,
+  "piecesMin": 1,
+  "arrondissements": [18],
+  "arrondissementsPref": [18],
   "meuble": "indifferent",
   "exclure": { "rdc": true, "dpeFG": true, "coloc": true },
   "poids": {
@@ -11,5 +11,5 @@
     "etageEleve": 2, "dpe": 2, "lumineux": 2, "calme": 1, "traversant": 1, "cave": 1, "parking": 0, "parquet": 1
   },
   "alerteActive": true,
-  "alerteScoreMin": 55
+  "alerteScoreMin": 45
 }
