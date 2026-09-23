@@ -45,28 +45,33 @@ score ≥ seuil (55 par défaut), pas un doublon. Maximum 8 messages par passage
 
 WhatsApp : pas d'API officielle gratuite pour envoyer à un particulier. Telegram est le choix pragmatique.
 
-### Enregistrer les critères pour le bot
+### Un compte partagé, pas un réglage par appareil
 
-Le site classe déjà avec les critères réglés dans le navigateur. Pour que le **bot** (alertes) les connaisse, ils doivent
-être dans `docs/criteria.json`. Deux façons :
+Depuis le 23/09/2026, critères de recherche, favoris/écartés, notes et annonces ajoutées à la main sont un **état
+partagé unique** entre tous les appareils qui ouvrent le site (Sacha, Tabatha, n'importe quel autre) : le Worker les
+lit/écrit dans le dépôt (`docs/criteria.json` et `docs/data/etat.json`) avec son propre jeton GitHub, jamais avec un
+jeton collé dans le navigateur. Le site va chercher cet état au chargement (`GET /etat`) et régulièrement pendant
+qu'il reste ouvert (toutes les ~25 s, tant que l'onglet est visible) ; chaque changement (♥/✕, note, curseur de
+critère, ajout manuel, proposition du bot validée) l'envoie au Worker (`POST /etat`), qui répond avec l'état complet
+à jour — c'est toujours cette réponse qui fait foi, jamais ce que le navigateur avait de son côté, ce qui règle de
+lui-même le cas de deux appareils qui changent la même chose presque en même temps (dernière écriture reçue par le
+Worker qui gagne, jamais de doublon puisque chaque donnée n'a qu'une seule place dans l'état). localStorage ne sert
+plus que de cache d'appoint par appareil (préfixe `*Cache`) pour un affichage instantané et un repli hors-ligne.
 
-- Depuis le site : ⚙ → dépôt + jeton GitHub (fine-grained, limité à ce dépôt, permission *Contents: read & write*),
-  puis « Enregistrer pour le bot ». Le jeton reste dans le navigateur. Mécanisme (lecture du sha, écriture,
-  mise à jour, suppression) **testé le 22/09/2026 directement contre l'API GitHub réelle**, sur un fichier
-  jetable — fonctionne comme prévu.
-- À la main : éditer `docs/criteria.json`.
-- Automatiquement quand elle valide une proposition du bot Claude (ci-dessous), si la synchronisation est
-  déjà configurée dans ⚙ ; sinon le message le lui rappelle.
-
-> **Historique :** un questionnaire « Ma recherche en détail » (formulaire + envoi manuel du récapitulatif à Sacha) a existé
-> jusqu'au 23/09/2026. Retiré : elle ne parle plus qu'au bot Claude, et tout ce qui compte part automatiquement dans le
-> journal partagé (ci-dessous) — plus besoin qu'elle envoie quoi que ce soit elle-même.
+> **Historique :** un bouton ⚙ demandait un jeton GitHub personnel collé dans le navigateur pour pousser
+> `docs/criteria.json` depuis le site. Supprimé le 23/09/2026 avec ce chantier (le Worker fait déjà tout ça, sans
+> jamais exposer de jeton au navigateur) — plus aucun jeton ne doit transiter par le site.
+>
+> Un questionnaire « Ma recherche en détail » (formulaire + envoi manuel du récapitulatif à Sacha) a existé jusqu'au
+> 23/09/2026, retiré au même moment : elle ne parle plus qu'au bot Claude, et tout ce qui compte part automatiquement
+> dans le journal partagé (ci-dessous).
 
 ### Bot Claude (« Demander à Claude ») et la mascotte
 
 Un widget de chat dans le site : Tabatha discute pour ajuster ses critères, Claude répond et — si elle demande clairement
 un changement — propose un nouveau réglage complet (diff affiché : « Budget max : 900 € → 850 € »). Elle valide d'un tap ;
-ça s'applique sur le site, et si la synchronisation (⚙) est déjà configurée, ça part aussi vers `docs/criteria.json`.
+ça s'applique pour tout le monde via le Worker (`POST /etat {action:'set_criteria'}`), qui écrit directement
+`docs/criteria.json`.
 
 Une petite mascotte (`docs/mascotte.webp` — image fournie par Sacha, recadrée et réduite pour le web depuis
 `il_fullxfull.7846345879_12sa.webp`, 3000×3000 sans transparence à l'origine ; **origine et droits de réutilisation à
@@ -161,9 +166,8 @@ Seuil d'alerte Telegram par défaut : 55/100 (score interne, indépendant du lib
   Elles sont ignorées (hypothèse : annonces périmées), ainsi que toute annonce publiée il y a plus de 75 jours.
 - **Doublons** : une même annonce postée par plusieurs agences est repérée par (prix, surface, arrondissement, étage,
   pièces) et masquée. Clé volontairement prudente : elle ne s'applique que si tous ces champs sont connus.
-- **Favoris / écartées / notes / annonces manuelles** sont stockés dans le navigateur (localStorage), donc par appareil —
-  si elle utilise le site sur deux appareils, chacun a son propre état. Ces actions sont aussi envoyées au journal
-  partagé (ci-dessus), donc Sacha les voit même si elles ne sont pas synchronisées entre ses appareils à elle.
+- **Favoris / écartées / notes / annonces manuelles / critères** sont un état **partagé** entre tous les appareils
+  depuis le 23/09/2026 (voir « Un compte partagé », ci-dessus) — plus un état par appareil.
 - **Pas de proximité métro** : il faudrait croiser avec les données de stations, non fait dans le prototype.
 - **Fraîcheur GitHub Actions** : les crons peuvent être retardés de plusieurs minutes aux heures de pointe.
 

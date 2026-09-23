@@ -20,18 +20,116 @@ function depuis(iso) {
   return rtf.format(Math.round(min / 1440), 'day');
 }
 
-// --- État ------------------------------------------------------------------
-let criteria = mergeCriteria(store.get('criteria', {}));
+// --- État partagé ------------------------------------------------------------------
+// Un seul « compte » pour tous les appareils : critères, favoris/écartés, notes et annonces
+// ajoutées à la main vivent sur le Worker (qui les écrit dans le dépôt), pas dans le localStorage
+// de CET appareil. Les clés *Cache ci-dessous ne sont qu'un cache de secours (affichage instantané
+// au chargement, et repli si le Worker est injoignable) — la vérité vient toujours de GET /etat.
+// D'anciennes clés (avant le 23/09/2026 : criteria/manuel/statut/vuJusqua/notes) servaient de seul
+// stockage par appareil ; on les reprend une fois comme point de départ si ce cache-ci est vide,
+// pour ne rien perdre de ce qu'un appareil avait déjà, puis on les laisse orphelines.
+let criteria = mergeCriteria(store.get('criteriaCache', store.get('criteria', {})));
 let base = []; // annonces du bot
 let meta = {};
-let manuel = store.get('manuel', []);
-let statut = store.get('statut', {}); // id -> 'fav' | 'ecarte'
-let vuJusqua = store.get('vuJusqua', new Date(Date.now() - 864e5).toISOString());
+let manuel = store.get('manuelCache', store.get('manuel', []));
+let statut = store.get('statutCache', store.get('statut', {})); // id -> 'fav' | 'ecarte'
+let vuJusqua = store.get('vuJusquaCache', store.get('vuJusqua', new Date(Date.now() - 864e5).toISOString()));
 let onglet = 'nouveautes';
 let limite = 30;
 let ranked = [];
-let notes = store.get('notes', {}); // id -> texte libre (son carnet, partagé avec Sacha via le journal)
+let notes = store.get('notesCache', store.get('notes', {})); // id -> texte libre (son carnet, partagé avec Sacha via le journal)
 let config = {}; // docs/config.json : { botUrl, botToken }
+let etatSnapshot = null; // dernier état partagé connu (comparaison pour éviter un rendu inutile)
+
+function sauverCacheLocal() {
+  store.set('criteriaCache', criteria);
+  store.set('manuelCache', manuel);
+  store.set('statutCache', statut);
+  store.set('vuJusquaCache', vuJusqua);
+  store.set('notesCache', notes);
+}
+function chaineEtat(etat) { return JSON.stringify([etat.criteria, etat.statut, etat.notes, etat.manuel, etat.vuJusqua]); }
+function adopterEtat(etat) {
+  criteria = mergeCriteria(etat.criteria || {});
+  statut = etat.statut && typeof etat.statut === 'object' ? etat.statut : {};
+  notes = etat.notes && typeof etat.notes === 'object' ? etat.notes : {};
+  manuel = Array.isArray(etat.manuel) ? etat.manuel : [];
+  vuJusqua = etat.vuJusqua || vuJusqua;
+  sauverCacheLocal();
+}
+
+async function chargerEtatPartage() {
+  if (!config.botUrl || !config.botToken) return null;
+  const r = await fetch(`${config.botUrl}/etat`, { headers: { 'X-App-Token': config.botToken } });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+// Envoie un changement (fav/écarte, note, critères, ajout manuel, vu) : appliqué tout de suite en
+// local pour rester réactif, puis au Worker qui fait foi — sa réponse remplace l'état local, ce qui
+// règle de lui-même le cas de deux appareils modifiant la même chose presque en même temps.
+async function appliquerEtat(action, params = {}) {
+  if (action === 'set_statut') { if (params.valeur) statut[params.id] = params.valeur; else delete statut[params.id]; }
+  else if (action === 'set_note') { if (params.texte) notes[params.id] = params.texte; else delete notes[params.id]; }
+  else if (action === 'set_vu') { if (!vuJusqua || params.ts > vuJusqua) vuJusqua = params.ts; }
+  else if (action === 'ajouter_manuel') { manuel.unshift(params.listing); }
+  else if (action === 'set_criteria') { criteria = mergeCriteria(params.criteria); }
+  sauverCacheLocal();
+  if (!config.botUrl || !config.botToken) return;
+  try {
+    const r = await fetch(`${config.botUrl}/etat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-App-Token': config.botToken },
+      body: JSON.stringify({ kind: 'etat', action, ...params, criteria }),
+    });
+    const etat = await r.json().catch(() => null);
+    if (r.ok && etat && !etat.error) {
+      adopterEtat(etat);
+      etatSnapshot = chaineEtat(etat);
+      remplirFormulaire();
+      render();
+    }
+  } catch {
+    // best-effort : le changement reste appliqué en local, la prochaine synchro le réconciliera
+  }
+}
+
+// Migration ponctuelle : si CET appareil avait déjà des favoris/notes/annonces manuelles (ancien
+// stockage 100% local) et que l'état partagé est encore vierge (personne n'a encore rien envoyé),
+// on les pousse une fois vers le Worker plutôt que de les laisser disparaître silencieusement.
+// Si l'état partagé a déjà du contenu, c'est lui qui fait foi : on ne réimpose pas un vieux local.
+async function migrerVersEtatPartage(etatServeur) {
+  const localVide = !Object.keys(statut).length && !Object.keys(notes).length && !manuel.length;
+  const serveurVide = !Object.keys(etatServeur.statut || {}).length && !Object.keys(etatServeur.notes || {}).length && !(etatServeur.manuel || []).length;
+  if (localVide || !serveurVide) return false;
+  // Chaque appliquerEtat() adopte la réponse du serveur (encore partielle en pleine migration) et
+  // remplace donc statut/notes/manuel en direct : on fige d'abord une copie de ce qu'il faut migrer,
+  // pour ne pas boucler sur des données déjà écrasées par l'étape précédente.
+  const statutInitial = { ...statut };
+  const notesInitiales = { ...notes };
+  const manuelInitial = [...manuel];
+  for (const [id, valeur] of Object.entries(statutInitial)) await appliquerEtat('set_statut', { id, valeur });
+  for (const [id, texte] of Object.entries(notesInitiales)) await appliquerEtat('set_note', { id, texte });
+  for (const listing of manuelInitial.reverse()) await appliquerEtat('ajouter_manuel', { listing }); // reverse : unshift restaure l'ordre
+  return true;
+}
+
+async function synchroniserEtat({ silencieux = false } = {}) {
+  try {
+    const etat = await chargerEtatPartage();
+    if (!etat) return;
+    const nouveau = chaineEtat(etat);
+    if (nouveau === etatSnapshot) return; // rien de changé ailleurs depuis la dernière fois
+    adopterEtat(etat);
+    etatSnapshot = nouveau;
+    remplirFormulaire();
+    limite = 30;
+    entete();
+    render();
+  } catch (e) {
+    if (!silencieux) console.error('Synchronisation impossible', e);
+  }
+}
 
 // --- Critères : formulaire <-> objet --------------------------------------
 const ETATS = ['neutre', 'pref', 'exclu'];
@@ -93,15 +191,15 @@ function lireFormulaire() {
     $(`#ow-${el.dataset.poids}`).textContent = el.value;
   }
   criteresDepuisArr();
-  store.set('criteria', criteria);
+  store.set('criteriaCache', criteria);
   sorties();
   limite = 30;
   render();
-  // On attend qu'elle arrête de bouger les curseurs avant de journaliser et de proposer un avis :
-  // sinon un simple glissement de slider enverrait des dizaines d'événements et de bulles.
+  // On attend qu'elle arrête de bouger les curseurs avant d'envoyer au Worker et de proposer un
+  // avis : sinon un simple glissement de slider enverrait des dizaines d'écritures et de bulles.
   clearTimeout(debounceCritere);
   debounceCritere = setTimeout(() => {
-    envoyerEvenement('critere_change', { source: 'panel', criteria });
+    appliquerEtat('set_criteria', { criteria, source: 'panel' });
     proposerBulleCriteres();
   }, 4000);
 }
@@ -245,36 +343,6 @@ function entete() {
   else ban.hidden = true;
 }
 
-// --- Synchronisation des critères vers le dépôt (pour le bot) --------------
-const b64 = (s) => btoa(unescape(encodeURIComponent(s)));
-function reglages() {
-  const guess = location.hostname.endsWith('.github.io') ? `${location.hostname.split('.')[0]}/${location.pathname.split('/')[1] || ''}` : '';
-  return { repo: guess, branch: 'main', token: '', ...store.get('sync', {}) };
-}
-
-async function synchroniser() {
-  const { repo, branch, token } = reglages();
-  const etat = $('#sync-etat');
-  if (!repo || !token) { $('#dlg-settings').showModal(); return; }
-  etat.textContent = 'Enregistrement…';
-  const url = `https://api.github.com/repos/${repo}/contents/docs/criteria.json`;
-  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
-  try {
-    const cur = await fetch(`${url}?ref=${encodeURIComponent(branch)}`, { headers });
-    const sha = cur.ok ? (await cur.json()).sha : undefined;
-    if (!cur.ok && cur.status !== 404) throw new Error(`lecture HTTP ${cur.status}`);
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify({ message: 'Mise à jour des critères', content: b64(JSON.stringify(criteria, null, 2) + '\n'), branch, sha }),
-    });
-    if (!res.ok) throw new Error(`écriture HTTP ${res.status}`);
-    etat.textContent = `Enregistré ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}. Le bot les utilisera au prochain passage.`;
-  } catch (e) {
-    etat.textContent = `Échec de l'enregistrement (${e.message}). Vérifie le dépôt et le jeton dans ⚙.`;
-  }
-}
-
 // --- Événements ------------------------------------------------------------
 function brancher() {
   $('#criteres').addEventListener('input', lireFormulaire);
@@ -301,11 +369,8 @@ function brancher() {
     if (!b) return;
     const id = b.closest('.card').dataset.id;
     const actif = statut[id] !== b.dataset.act;
-    statut[id] = actif ? b.dataset.act : undefined;
-    if (!statut[id]) delete statut[id];
-    store.set('statut', statut);
     const l = ranked.find((x) => x.id === id) || manuel.find((x) => x.id === id);
-    if (actif) envoyerEvenement(b.dataset.act, { listingId: id, url: l?.url, title: l?.title, price: l?.price });
+    appliquerEtat('set_statut', { id, valeur: actif ? b.dataset.act : null, url: l?.url, title: l?.title, price: l?.price });
     render();
   });
   $('#liste').addEventListener('focusout', (e) => {
@@ -313,14 +378,11 @@ function brancher() {
     if (!ta) return;
     const id = ta.dataset.id;
     const val = ta.value.trim();
-    if (val) notes[id] = val; else delete notes[id];
-    store.set('notes', notes);
     const l = ranked.find((x) => x.id === id) || manuel.find((x) => x.id === id);
-    envoyerEvenement('note', { listingId: id, url: l?.url, title: l?.title, note: val });
+    appliquerEtat('set_note', { id, texte: val, url: l?.url, title: l?.title });
   });
   $('#btn-more').addEventListener('click', () => { limite += 30; render(); });
-  $('#btn-vu').addEventListener('click', () => { vuJusqua = new Date().toISOString(); store.set('vuJusqua', vuJusqua); render(); });
-  $('#btn-sync').addEventListener('click', synchroniser);
+  $('#btn-vu').addEventListener('click', () => { const ts = new Date().toISOString(); appliquerEtat('set_vu', { ts }); render(); });
 
   $('#btn-add').addEventListener('click', () => $('#dlg-add').showModal());
   $('#form-add').addEventListener('submit', (e) => {
@@ -328,47 +390,32 @@ function brancher() {
     const f = new FormData(e.target);
     const num = (k) => (f.get(k) === '' || f.get(k) == null ? null : Number(f.get(k)));
     const now = new Date().toISOString();
-    const l = {
+    const listing = {
       id: `manuel:${Date.now()}`, source: 'Manuel', url: f.get('url'), title: f.get('title') || null,
       price: num('price'), surface: num('surface'), rooms: num('rooms'), arrondissement: num('arrondissement'), floor: num('floor'),
       elevator: f.get('elevator') ? true : null, dpe: f.get('dpe') || null, furnished: null,
       features: f.get('balcon') ? { balcon: true } : {}, first_seen: now, last_seen: now, publishedAt: now, photo: null,
     };
-    manuel.unshift(l);
-    store.set('manuel', manuel);
-    envoyerEvenement('ajout_manuel', { url: l.url, title: l.title, price: l.price });
+    appliquerEtat('ajouter_manuel', { listing });
     e.target.reset();
     render();
   });
 
   $('#btn-recharger-criteres').addEventListener('click', async () => {
-    // L'appli ne va chercher docs/criteria.json qu'à la toute première visite d'un appareil ; ce
-    // bouton force un rechargement explicite, utile pour qui consulte le site sans être Tabatha
-    // elle-même (ses propres réglages locaux à elle ne sont jamais écrasés silencieusement).
-    if (!confirm('Recharger les critères actuels du bot ? Ça remplace les réglages de CET appareil.')) return;
+    // Un compte partagé n'a plus de « critères de cet appareil » : ce bouton réinitialise les
+    // critères de recherche pour TOUT LE MONDE depuis le fichier de base du dépôt.
+    if (!confirm('Recharger les critères de base pour tout le monde (remplace ce qui est actuellement partagé) ?')) return;
     try {
       const r = await fetch(`criteria.json?t=${Date.now()}`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      criteria = mergeCriteria(await r.json());
-      store.set('criteria', criteria);
+      const c = await r.json();
+      await appliquerEtat('set_criteria', { criteria: c, source: 'reset' });
       remplirFormulaire();
       limite = 30;
       render();
     } catch (e) {
       alert(`Échec du rechargement (${e.message}).`);
     }
-  });
-
-  $('#btn-settings').addEventListener('click', () => {
-    const r = reglages();
-    const f = $('#form-settings');
-    f.repo.value = r.repo; f.branch.value = r.branch; f.token.value = r.token;
-    $('#dlg-settings').showModal();
-  });
-  $('#form-settings').addEventListener('submit', (e) => {
-    if (e.submitter?.value !== 'ok') return;
-    const f = e.target;
-    store.set('sync', { repo: f.repo.value.trim(), branch: f.branch.value.trim(), token: f.token.value.trim() });
   });
 }
 
@@ -430,20 +477,13 @@ function afficherProposition(p) {
     <div class="dlg-actions"><button class="btn ghost small" id="bot-ignorer" type="button">Ignorer</button><button class="btn primary small" id="bot-appliquer" type="button">Appliquer</button></div>`;
   $('#bot-ignorer').addEventListener('click', () => { box.hidden = true; derniereProposition = null; });
   $('#bot-appliquer').addEventListener('click', async () => {
-    criteria = mergeCriteria(p);
-    store.set('criteria', criteria);
+    box.hidden = true;
+    $('#bot-etat').textContent = 'Application pour tout le monde…';
+    await appliquerEtat('set_criteria', { criteria: p, source: 'bot', diff });
     remplirFormulaire();
     limite = 30;
     render();
-    box.hidden = true;
-    envoyerEvenement('critere_change', { source: 'bot', diff, criteria });
-    const r2 = reglages();
-    if (r2.repo && r2.token) {
-      $('#bot-etat').textContent = 'Appliqué sur le site. Envoi au bot…';
-      await synchroniser();
-    } else {
-      $('#bot-etat').textContent = "Appliqué sur ce site. Ouvre ⚙ pour l'envoyer aussi au bot des alertes.";
-    }
+    $('#bot-etat').textContent = 'Appliqué pour tout le monde.';
   });
 }
 
@@ -582,16 +622,28 @@ async function demarrer() {
   brancher();
   brancherBot();
   brancherMascotte();
-  fetch('config.json').then((r) => (r.ok ? r.json() : {})).then((c) => { config = c || {}; }).catch(() => {});
+  // Il faut le jeton du Worker avant de pouvoir aller chercher l'état partagé : on l'attend ici,
+  // contrairement à listings.json qui ne dépend de rien.
+  config = await fetch('config.json').then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
   try {
-    const [d, c] = await Promise.all([
+    const [d, etat] = await Promise.all([
       fetch(`data/listings.json?t=${Date.now()}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }),
-      // Premier passage sur cet appareil : on part des critères publiés dans le dépôt.
-      store.get('criteria', null) ? null : fetch('criteria.json').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      chargerEtatPartage().catch((e) => { console.error('État partagé indisponible, on repart du cache local', e); return null; }),
     ]);
     base = d.listings;
     meta = d.meta;
-    if (c) { criteria = mergeCriteria(c); store.set('criteria', criteria); remplirFormulaire(); }
+    if (etat) {
+      const migre = await migrerVersEtatPartage(etat);
+      const definitif = migre ? await chargerEtatPartage() : etat;
+      adopterEtat(definitif);
+      etatSnapshot = chaineEtat(definitif);
+      remplirFormulaire();
+    } else if (!store.get('criteriaCache', null) && !store.get('criteria', null)) {
+      // Ni état partagé joignable, ni aucun cache local (tout premier appareil, hors-ligne) :
+      // repli sur la base publiée dans le dépôt pour ne pas rester sur des critères par défaut absurdes.
+      const c = await fetch('criteria.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (c) { criteria = mergeCriteria(c); remplirFormulaire(); }
+    }
   } catch (e) {
     $('#maj').textContent = 'Impossible de charger les annonces (data/listings.json).';
   }
@@ -599,6 +651,10 @@ async function demarrer() {
   dessinerSources();
   render();
   if (!compteurs().nouveautes) { onglet = 'meilleures'; render(); }
+  // Un autre appareil peut avoir changé quelque chose entre-temps : on se resynchronise
+  // régulièrement pendant que l'onglet est visible, et tout de suite en y revenant.
+  setInterval(() => { if (document.visibilityState === 'visible') synchroniserEtat({ silencieux: true }); }, 25_000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') synchroniserEtat({ silencieux: true }); });
 }
 
 demarrer();

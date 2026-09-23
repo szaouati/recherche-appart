@@ -1,5 +1,13 @@
 // Relais entre le site (statique, public) et l'API Anthropic : la clé Claude reste ici, jamais dans
 // le navigateur. Réutilise docs/score.mjs comme unique source de vérité pour la forme des critères.
+//
+// Depuis le 23/09/2026, ce Worker est aussi la seule source de vérité pour l'état PARTAGÉ entre tous
+// les appareils qui ouvrent le site (Sacha, Tabatha, n'importe quel autre) : critères de recherche
+// (docs/criteria.json), et favoris/écartés/notes/annonces ajoutées à la main (docs/data/etat.json).
+// Avant, chaque appareil gardait ces réglages dans son propre localStorage : deux téléphones
+// pouvaient diverger. Maintenant, le site lit et écrit toujours via ce Worker, qui lit/écrit les
+// fichiers du dépôt avec son propre jeton GitHub (jamais exposé au navigateur) et sert d'arbitre
+// unique en cas d'écritures concurrentes (retry-once-on-409, comme le journal).
 import { CRITERES, mergeCriteria } from '../../docs/score.mjs';
 
 const MODEL = 'claude-haiku-4-5-20251001';
@@ -43,8 +51,9 @@ const CRITERIA_TOOL = {
 const clamp = (n, lo, hi, dflt) => (Number.isFinite((n = Number(n))) ? Math.min(hi, Math.max(lo, n)) : dflt);
 const listeArr = (a) => (Array.isArray(a) ? [...new Set(a.map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 20))] : []);
 
-// Ne jamais faire confiance telle quelle à la sortie du modèle, même hors contexte adverse :
-// on reclampe tout aux mêmes bornes que le schéma, en repartant des critères actuels en cas de doute.
+// Ne jamais faire confiance telle quelle à la sortie du modèle ou à ce qu'envoie le navigateur, même
+// hors contexte adverse : on reclampe tout aux mêmes bornes que le schéma, en repartant des critères
+// actuels en cas de doute.
 function validerProposition(p, actuel) {
   if (!p || typeof p !== 'object') return null;
   const c = mergeCriteria(actuel);
@@ -71,12 +80,34 @@ function corsHeaders(origin, allowed) {
   return {
     'Access-Control-Allow-Origin': ok ? origin : 'null',
     'Access-Control-Allow-Headers': 'Content-Type, X-App-Token',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     Vary: 'Origin',
   };
 }
 
 const json = (obj, status, headers) => new Response(JSON.stringify(obj), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
+
+// --- Lecture / écriture générique d'un fichier JSON du dépôt ------------------------------------
+async function lireJSON(env, path, vide) {
+  const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
+  const headers = { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'recherche-appart-bot' };
+  const r = await fetch(url, { headers });
+  if (r.status === 404) return { sha: undefined, data: vide };
+  if (!r.ok) throw new Error(`GitHub GET ${path} ${r.status}`);
+  const body = await r.json();
+  try {
+    return { sha: body.sha, data: JSON.parse(decodeURIComponent(escape(atob(body.content)))) };
+  } catch {
+    return { sha: body.sha, data: vide };
+  }
+}
+
+async function ecrireJSON(env, path, data, sha, message) {
+  const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
+  const headers = { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'recherche-appart-bot' };
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + '\n')));
+  return fetch(url, { method: 'PUT', headers, body: JSON.stringify({ message, content, sha, branch: 'main' }) });
+}
 
 // --- Journal partagé -------------------------------------------------------------------------
 // Chaque échange avec le bot et chaque action notable de Tabatha dans l'appli (♥, ✕, note,
@@ -85,47 +116,22 @@ const json = (obj, status, headers) => new Response(JSON.stringify(obj), { statu
 // c'est un journal utile pour Sacha, pas une fonctionnalité vitale de l'appli.
 const MAX_ENTRIES = 600;
 
-async function lireFichierGitHub(env) {
-  const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${env.JOURNAL_PATH}`;
-  const headers = { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'recherche-appart-bot' };
-  const r = await fetch(url, { headers });
-  if (r.status === 404) return { sha: undefined, data: { entries: [] } };
-  if (!r.ok) throw new Error(`GitHub GET ${r.status}`);
-  const body = await r.json();
-  let data;
-  try {
-    data = JSON.parse(decodeURIComponent(escape(atob(body.content))));
-  } catch {
-    data = { entries: [] };
-  }
-  if (!Array.isArray(data.entries)) data.entries = [];
-  return { sha: body.sha, data };
-}
-
-async function ecrireFichierGitHub(env, data, sha) {
-  const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${env.JOURNAL_PATH}`;
-  const headers = { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'recherche-appart-bot' };
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + '\n')));
-  return fetch(url, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify({ message: `Journal : ${data.entries.at(-1)?.kind ?? 'mise à jour'}`, content, sha, branch: 'main' }),
-  });
-}
-
 async function appendJournal(env, entry) {
   if (!env.GITHUB_TOKEN) return; // pas encore configuré : on n'échoue pas bruyamment pour autant
+  const path = env.JOURNAL_PATH || 'docs/data/journal.json';
   try {
-    const { sha, data } = await lireFichierGitHub(env);
+    let { sha, data } = await lireJSON(env, path, { entries: [] });
+    if (!Array.isArray(data.entries)) data.entries = [];
     data.entries.push({ ts: new Date().toISOString(), ...entry });
     data.entries = data.entries.slice(-MAX_ENTRIES);
-    let res = await ecrireFichierGitHub(env, data, sha);
+    let res = await ecrireJSON(env, path, data, sha, `Journal : ${entry.type ?? entry.kind ?? 'mise à jour'}`);
     if (res.status === 409) {
       // Deux écritures concurrentes (ex. un tap ♥ juste après une réponse du chat) : on relit et on réessaie une fois.
-      const retry = await lireFichierGitHub(env);
+      const retry = await lireJSON(env, path, { entries: [] });
+      if (!Array.isArray(retry.data.entries)) retry.data.entries = [];
       retry.data.entries.push({ ts: new Date().toISOString(), ...entry });
       retry.data.entries = retry.data.entries.slice(-MAX_ENTRIES);
-      res = await ecrireFichierGitHub(env, retry.data, retry.sha);
+      res = await ecrireJSON(env, path, retry.data, retry.sha, `Journal : ${entry.type ?? entry.kind ?? 'mise à jour'}`);
     }
     if (!res.ok) console.error('journal: écriture GitHub échouée', res.status, await res.text());
   } catch (e) {
@@ -135,6 +141,90 @@ async function appendJournal(env, entry) {
 
 const TYPES_EVENEMENT = ['fav', 'ecarte', 'note', 'critere_change', 'ajout_manuel', 'avis'];
 
+// --- État partagé (favoris/écartés/notes/annonces manuelles) -----------------------------------
+const ETAT_VIDE = { statut: {}, notes: {}, manuel: [], vuJusqua: null };
+
+function etatPropre(data) {
+  return {
+    statut: data?.statut && typeof data.statut === 'object' ? data.statut : {},
+    notes: data?.notes && typeof data.notes === 'object' ? data.notes : {},
+    manuel: Array.isArray(data?.manuel) ? data.manuel : [],
+    vuJusqua: typeof data?.vuJusqua === 'string' ? data.vuJusqua : null,
+  };
+}
+
+async function lireEtat(env) {
+  const { data } = await lireJSON(env, env.ETAT_PATH || 'docs/data/etat.json', ETAT_VIDE);
+  return etatPropre(data);
+}
+
+// Applique `muter` sur l'état actuel et écrit, avec un réessai (relecture + nouvelle application de
+// la même mutation) en cas de conflit d'écriture — la mutation ne doit dépendre que de l'état qu'elle
+// reçoit, jamais d'une valeur capturée avant coup, pour que ce réessai soit correct.
+async function ecrireEtatMute(env, muter) {
+  const path = env.ETAT_PATH || 'docs/data/etat.json';
+  let { sha, data } = await lireJSON(env, path, ETAT_VIDE);
+  data = etatPropre(data);
+  muter(data);
+  data.updatedAt = new Date().toISOString();
+  let res = await ecrireJSON(env, path, data, sha, 'État partagé : mise à jour');
+  if (res.status === 409) {
+    const retry = await lireJSON(env, path, ETAT_VIDE);
+    data = etatPropre(retry.data);
+    muter(data);
+    data.updatedAt = new Date().toISOString();
+    res = await ecrireJSON(env, path, data, retry.sha, 'État partagé : mise à jour');
+  }
+  if (!res.ok) throw new Error(`GitHub PUT état ${res.status} : ${(await res.text()).slice(0, 300)}`);
+  return data;
+}
+
+async function ecrireCriteriaPartage(env, propose) {
+  const path = env.CRITERIA_PATH || 'docs/criteria.json';
+  let { sha, data } = await lireJSON(env, path, {});
+  let suivant = validerProposition(propose, mergeCriteria(data));
+  let res = await ecrireJSON(env, path, suivant, sha, 'Critères partagés : mise à jour');
+  if (res.status === 409) {
+    const retry = await lireJSON(env, path, {});
+    suivant = validerProposition(propose, mergeCriteria(retry.data));
+    res = await ecrireJSON(env, path, suivant, retry.sha, 'Critères partagés : mise à jour');
+  }
+  if (!res.ok) throw new Error(`GitHub PUT critères ${res.status} : ${(await res.text()).slice(0, 300)}`);
+  return suivant;
+}
+
+async function etatComplet(env) {
+  const [{ data: critData }, etat] = await Promise.all([lireJSON(env, env.CRITERIA_PATH || 'docs/criteria.json', {}), lireEtat(env)]);
+  return { criteria: mergeCriteria(critData), ...etat };
+}
+
+const num = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
+
+// Construit l'annonce ajoutée à la main côté serveur : on fait confiance aux champs de contenu
+// (prix, surface…) mais jamais à un id/horodatage fourni par le navigateur.
+function construireAnnonceManuelle(l) {
+  const now = new Date().toISOString();
+  return {
+    id: `manuel:${Date.now()}`,
+    source: 'Manuel',
+    url: typeof l?.url === 'string' ? l.url.slice(0, 500) : '',
+    title: l?.title ? String(l.title).slice(0, 200) : null,
+    price: num(l?.price),
+    surface: num(l?.surface),
+    rooms: num(l?.rooms),
+    arrondissement: num(l?.arrondissement),
+    floor: num(l?.floor),
+    elevator: l?.elevator ? true : null,
+    dpe: typeof l?.dpe === 'string' && /^[A-G]$/.test(l.dpe) ? l.dpe : null,
+    furnished: null,
+    features: l?.balcon || l?.features?.balcon ? { balcon: true } : {},
+    first_seen: now,
+    last_seen: now,
+    publishedAt: now,
+    photo: null,
+  };
+}
+
 export default {
   async fetch(request, env, ctx) {
     const allowed = (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -142,17 +232,31 @@ export default {
     const headers = corsHeaders(origin, allowed);
 
     if (request.method === 'OPTIONS') return new Response(null, { headers });
-    if (request.method !== 'POST') return json({ error: 'Méthode non supportée' }, 405, headers);
     if (!allowed.includes(origin)) return json({ error: 'Origine non autorisée' }, 403, headers);
     if (request.headers.get('X-App-Token') !== env.APP_TOKEN) return json({ error: 'Jeton invalide' }, 401, headers);
 
     const ip = request.headers.get('CF-Connecting-IP') || 'inconnu';
     try {
       const { success } = await env.RATE_LIMITER.limit({ key: ip });
-      if (!success) return json({ error: 'Trop de messages, réessaie dans une minute.' }, 429, headers);
+      if (!success) return json({ error: 'Trop de requêtes, réessaie dans une minute.' }, 429, headers);
     } catch (e) {
       console.error('rate limiter indisponible', e); // on continue plutôt que de bloquer le service
     }
+
+    // Lecture de l'état partagé (critères + favoris/écartés/notes/annonces manuelles) : appelée au
+    // chargement du site et régulièrement en tâche de fond pour que tous les appareils convergent.
+    if (request.method === 'GET') {
+      const { pathname } = new URL(request.url);
+      if (pathname !== '/etat') return json({ error: 'Introuvable' }, 404, headers);
+      try {
+        return json(await etatComplet(env), 200, headers);
+      } catch (e) {
+        console.error(e);
+        return json({ error: 'Lecture impossible' }, 502, headers);
+      }
+    }
+
+    if (request.method !== 'POST') return json({ error: 'Méthode non supportée' }, 405, headers);
 
     let body;
     try {
@@ -161,8 +265,65 @@ export default {
       return json({ error: 'JSON invalide' }, 400, headers);
     }
 
-    // Simple fait à consigner (♥ / ✕ / note / critères / ajout manuel) : pas d'appel à Claude,
-    // juste un ajout au journal. Réponse immédiate, écriture en tâche de fond.
+    // Écriture de l'état partagé : chaque appareil envoie son intention (« mets fav sur X »,
+    // « voici mes nouveaux critères »…), le Worker l'applique sur l'état le plus frais possible et
+    // renvoie l'état complet qui en résulte — c'est TOUJOURS cette réponse qui fait foi, jamais ce
+    // que le navigateur avait localement, ce qui règle de lui-même les écritures simultanées.
+    if (body.kind === 'etat') {
+      try {
+        if (body.action === 'set_criteria') {
+          if (!body.criteria || typeof body.criteria !== 'object') return json({ error: 'critères invalides' }, 400, headers);
+          const criteria = await ecrireCriteriaPartage(env, body.criteria);
+          ctx.waitUntil(appendJournal(env, {
+            kind: 'event', type: 'critere_change',
+            payload: { source: typeof body.source === 'string' ? body.source : 'app', diff: Array.isArray(body.diff) ? body.diff.slice(0, 20) : undefined },
+            criteria,
+          }));
+          return json({ criteria, ...(await lireEtat(env)) }, 200, headers);
+        }
+
+        const id = typeof body.id === 'string' && body.id ? body.id.slice(0, 200) : null;
+        let etat;
+        let journalType = null;
+        let journalPayload = null;
+
+        if (body.action === 'set_statut') {
+          if (!id) return json({ error: 'id manquant' }, 400, headers);
+          const valeur = ['fav', 'ecarte'].includes(body.valeur) ? body.valeur : null;
+          etat = await ecrireEtatMute(env, (e) => { if (valeur) e.statut[id] = valeur; else delete e.statut[id]; });
+          if (valeur) { journalType = valeur; journalPayload = { listingId: id, url: body.url, title: body.title, price: body.price }; }
+        } else if (body.action === 'set_note') {
+          if (!id) return json({ error: 'id manquant' }, 400, headers);
+          const texte = String(body.texte ?? '').slice(0, 2000).trim();
+          etat = await ecrireEtatMute(env, (e) => { if (texte) e.notes[id] = texte; else delete e.notes[id]; });
+          journalType = 'note';
+          journalPayload = { listingId: id, url: body.url, title: body.title, note: texte };
+        } else if (body.action === 'set_vu') {
+          const ts = Number.isFinite(Date.parse(body.ts)) ? body.ts : new Date().toISOString();
+          etat = await ecrireEtatMute(env, (e) => { if (!e.vuJusqua || ts > e.vuJusqua) e.vuJusqua = ts; });
+        } else if (body.action === 'ajouter_manuel') {
+          const listing = construireAnnonceManuelle(body.listing);
+          etat = await ecrireEtatMute(env, (e) => { e.manuel.unshift(listing); e.manuel = e.manuel.slice(0, 200); });
+          journalType = 'ajout_manuel';
+          journalPayload = { url: listing.url, title: listing.title, price: listing.price };
+        } else {
+          return json({ error: 'Action inconnue' }, 400, headers);
+        }
+
+        if (journalType) {
+          const criteria = mergeCriteria(body.criteria && typeof body.criteria === 'object' ? body.criteria : {});
+          ctx.waitUntil(appendJournal(env, { kind: 'event', type: journalType, payload: journalPayload, criteria }));
+        }
+        const { data: critData } = await lireJSON(env, env.CRITERIA_PATH || 'docs/criteria.json', {});
+        return json({ criteria: mergeCriteria(critData), ...etat }, 200, headers);
+      } catch (e) {
+        console.error(e);
+        return json({ error: "Échec de l'enregistrement partagé, réessaie." }, 502, headers);
+      }
+    }
+
+    // Simple fait à consigner qui ne fait pas partie de l'état partagé (avis 👍/👎 sur la mascotte) :
+    // pas d'appel à Claude, juste un ajout au journal. Réponse immédiate, écriture en tâche de fond.
     if (body.kind === 'event') {
       const type = TYPES_EVENEMENT.includes(body.type) ? body.type : null;
       if (!type) return json({ error: 'Type d\'événement inconnu' }, 400, headers);

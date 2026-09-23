@@ -40,8 +40,7 @@
     <div class="top-actions">
       <button class="btn primary" id="btn-bot">Demander à Claude</button>
       <button class="btn" id="btn-add">+ Ajouter une annonce</button>
-      <button class="btn ghost" id="btn-recharger-criteres" title="Recharger les critères actuels du bot (remplace les réglages de cet appareil)" aria-label="Recharger les critères du bot">⟳</button>
-      <button class="btn ghost" id="btn-settings" title="Réglages de synchronisation" aria-label="Réglages">⚙</button>
+      <button class="btn ghost" id="btn-recharger-criteres" title="Recharger les critères de base pour tout le monde" aria-label="Recharger les critères de base">⟳</button>
     </div>
   </header>
 
@@ -91,11 +90,6 @@
         <label class="field">Seulement si le score est au moins de <output id="o-alerte"></output>
           <input type="range" id="alerteScoreMin" min="40" max="95" step="1"></label>
       </section>
-
-      <section class="sync">
-        <button class="btn primary" id="btn-sync">Enregistrer pour le bot</button>
-        <p class="hint" id="sync-etat">Le site classe déjà les annonces avec ces critères. Pour que le bot les utilise aussi pour les alertes, enregistre-les.</p>
-      </section>
     </details>
 
     <section id="resultats" aria-live="polite">
@@ -130,18 +124,6 @@
         <label><input type="checkbox" name="balcon"> Balcon / terrasse</label>
       </div>
       <div class="dlg-actions"><button class="btn ghost" value="cancel" formnovalidate>Annuler</button><button class="btn primary" value="ok">Ajouter</button></div>
-    </form>
-  </dialog>
-
-  <dialog id="dlg-settings">
-    <form method="dialog" id="form-settings" class="dlg">
-      <h2>Synchronisation avec le bot</h2>
-      <svg class="flourish flourish--sm flourish--left" aria-hidden="true"><use href="#flourish-def"></use></svg>
-      <p class="hint">Pour enregistrer les critères depuis ce site, il faut un jeton GitHub limité à ce seul dépôt (permission « Contents : lecture et écriture »). Il reste dans ce navigateur, uniquement.</p>
-      <label>Dépôt <input name="repo" placeholder="proprietaire/nom-du-depot" required></label>
-      <label>Branche <input name="branch" value="main" required></label>
-      <label>Jeton GitHub <input name="token" type="password" autocomplete="off" placeholder="github_pat_…"></label>
-      <div class="dlg-actions"><button class="btn ghost" value="cancel" formnovalidate>Fermer</button><button class="btn primary" value="ok">Enregistrer</button></div>
     </form>
   </dialog>
 

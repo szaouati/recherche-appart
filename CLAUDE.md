@@ -16,16 +16,31 @@ Paris. Elle règle ses critères et discute avec le bot dans l'appli ; Sacha sui
 
 ## Où vivent les données (à lire avant de répondre à Sacha)
 
+Depuis le 23/09/2026, **un seul compte partagé** entre tous les appareils qui ouvrent le site
+(Sacha, Tabatha, n'importe quel autre) : critères, favoris/écartés (`statut`), notes et annonces
+ajoutées à la main ne sont plus dans le localStorage de chaque appareil, mais dans le dépôt,
+lus/écrits exclusivement par le Worker (`GET`/`POST /etat` sur `worker/src/index.mjs`). Le site
+recharge cet état au démarrage et toutes les ~25 s pendant qu'il reste ouvert, donc un changement
+fait sur un appareil apparaît sur les autres sans action de leur part. localStorage ne sert plus
+que de cache d'appoint par appareil (clés `*Cache`), jamais de source de vérité.
+
 | Fichier | Contenu | Écrit par |
 |---|---|---|
-| `docs/criteria.json` | Ses critères actuels (source de vérité pour le bot) | Elle (site), ou le bot Claude via un `git push` |
+| `docs/criteria.json` | Critères de recherche actuels, **partagés** (source de vérité pour le bot ET pour le site) | Le Worker uniquement, via `POST /etat {action:'set_criteria'}` — plus jamais par le navigateur directement |
+| `docs/data/etat.json` | **État partagé** : favoris/écartés (`statut`), notes, annonces ajoutées à la main (`manuel`), dernière visite (`vuJusqua`) | Le Worker uniquement, via `POST /etat` |
 | `docs/data/listings.json` | Annonces collectées + score, ~toutes les 30 min | `collector/collect.mjs` (Actions) |
-| `docs/data/journal.json` | **Journal partagé** : chaque échange avec le bot dans l'appli, et chaque action notable (♥ garder, ✕ écarter, note personnelle, changement de critères, ajout manuel, 👍/👎 à la mascotte) | Le Worker (`worker/src/index.mjs`), en tâche de fond, à chaque interaction |
+| `docs/data/journal.json` | **Journal partagé** (historique, append-only) : chaque échange avec le bot dans l'appli, et chaque action notable (♥ garder, ✕ écarter, note personnelle, changement de critères, ajout manuel, 👍/👎 à la mascotte) | Le Worker (`worker/src/index.mjs`), en tâche de fond, à chaque interaction |
 | `docs/app.js` / `docs/score.mjs` | Classement + libellés (`verdictScore`, pas de note brute affichée) | — |
 | `samples/` (gitignored) | E-mails d'alerte PAP/SeLoger/Leboncoin, pour construire l'analyseur | Sacha, ou lu directement dans `alertes.appart.tabatha@gmail.com` via le connecteur Gmail de la session (vérifier que c'est bien ce compte avant toute lecture) |
 
-`docs/data/journal.json` est la mémoire de ce qu'elle veut, pense et a fait. **Le lire avant de
-répondre à Sacha sur "où elle en est"**, plutôt que de re-déduire depuis les seuls critères.
+`docs/data/journal.json` reste l'historique (append-only, jamais rejoué) ; `docs/data/etat.json`
+est l'état COURANT (une seule valeur par clé). **Lire le journal avant de répondre à Sacha sur "où
+elle en est"**, mais lire `etat.json` (ou `criteria.json`) pour savoir ce qui est vrai *maintenant*.
+
+Ancienne mécanique supprimée le 23/09/2026 (sécurité) : un bouton ⚙ demandait de coller un jeton
+GitHub personnel dans le navigateur pour pousser `criteria.json` depuis le site. Il est parti en
+même temps que ce chantier — plus aucun jeton ne doit jamais transiter par le navigateur, le
+Worker a déjà tout ce qu'il faut avec son propre `GITHUB_TOKEN`.
 
 ## Runbook — Sacha demande une mise à jour « top 10 »
 
@@ -37,9 +52,9 @@ message à lui envoyer ».
    critères actuels — pas besoin de relancer une collecte, les données du cron suffisent sauf si
    elles ont plus de quelques heures (regarder `meta.generatedAt` ; si très vieilles, dire à Sacha
    que le bot semble à l'arrêt plutôt que de produire un top 10 sur des données mortes).
-3. Exclure : les annonces qu'elle a déjà écartées (`statut` — mais ce champ vit dans son
-   navigateur, pas dans le journal ; se fier plutôt aux événements `ecarte` du journal), et celles
-   déjà signalées dans un top précédent (chercher les entrées `kind:'top10_envoye'`).
+3. Exclure : les annonces déjà écartées (lire `docs/data/etat.json` → `statut[id] === 'ecarte'`,
+   partagé et à jour depuis le 23/09/2026 — plus besoin de déduire ça des événements du journal), et
+   celles déjà signalées dans un top précédent (chercher les entrées `kind:'top10_envoye'`).
 4. Prendre les 10 meilleures parmi les non-écartées et pas-déjà-signalées, en tenant compte des
    avis exprimés dans le journal (un commentaire négatif sur un quartier, un 👎 sur un critère…).
 5. Rédiger un message WhatsApp prêt à copier-coller, à donner à Sacha (jamais à envoyer soi-même :
@@ -88,6 +103,6 @@ détail complet. Ce qui reste à faire, et ce qu'il ne faut pas re-découvrir :
 - Le fait que le journal soit visible par Sacha est documenté **dans l'appli elle-même** (bulle
   d'accueil de la mascotte, hint du chat) : ne jamais rendre cette collecte plus silencieuse ou
   plus large sans mettre à jour ce texte en conséquence — c'est une question de confiance avec Tabatha.
-- Le dépôt est public : `docs/criteria.json`, `docs/config.json` (jeton d'appli, non sensible) et
-  `docs/data/journal.json` sont lisibles par tous. Ne jamais y mettre une donnée réellement sensible
-  (mot de passe, numéro, adresse postale précise).
+- Le dépôt est public : `docs/criteria.json`, `docs/config.json` (jeton d'appli, non sensible),
+  `docs/data/journal.json` et `docs/data/etat.json` (favoris/notes/annonces manuelles) sont lisibles
+  par tous. Ne jamais y mettre une donnée réellement sensible (mot de passe, numéro, adresse postale précise).
