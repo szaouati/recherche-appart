@@ -193,7 +193,7 @@ function carte(l) {
         <button class="mini" data-act="fav" aria-pressed="${statut[l.id] === 'fav'}">♥ Garder</button>
         <button class="mini" data-act="ecarte" aria-pressed="${statut[l.id] === 'ecarte'}">✕ Écarter</button>
         <button class="mini mascotte-mini" data-mascotte-annonce="${esc(l.id)}" type="button" title="En discuter avec le bot">
-          <svg width="16" height="16" aria-hidden="true"><use href="#mascotte-def"></use></svg></button>
+          <img src="mascotte.webp" width="18" height="18" alt=""></button>
         <span class="hint">${esc(l.source)} · ${l.publishedAt ? 'publiée ' + depuis(l.publishedAt) : 'vue ' + depuis(l.first_seen)}</span>
       </div>
     </div>
@@ -482,10 +482,11 @@ function brancherBot() {
 }
 
 // --- La mascotte : présence discrète qui invite à tout modifier, et récolte ses avis ----------
-// Un petit animal (inspiré de l'univers de Chocola & Vanilla, dessiné pour ce site — pas le
-// personnage du manga) flotte en bas de l'écran. Il ouvre le même chat que « Demander à Claude » ;
-// il sert surtout à montrer, dans l'appli, que tout est modifiable, et à glisser de temps en temps
-// une question courte (👍/👎) qui part directement dans le journal partagé avec Sacha.
+// Illustration : docs/mascotte.webp (fournie par Sacha, recadrée/redimensionnée pour le web —
+// voir avec lui l'origine et les droits d'usage avant toute réutilisation ailleurs).
+// Elle flotte en bas de l'écran et ouvre le même chat que « Demander à Claude » ; elle sert surtout
+// à montrer, dans l'appli, que tout est modifiable, et à glisser de temps en temps une question
+// courte (👍/👎) qui part directement dans le journal partagé avec Sacha.
 function montrerBulle(texte, boutons) {
   const bulle = $('#mascotte-bulle');
   bulle.innerHTML = `<p>${esc(texte)}</p><div class="mascotte-bulle-actions"></div>`;

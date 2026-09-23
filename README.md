@@ -66,8 +66,10 @@ Un widget de chat dans le site : Tabatha discute pour ajuster ses critères, Cla
 un changement — propose un nouveau réglage complet (diff affiché : « Budget max : 900 € → 850 € »). Elle valide d'un tap ;
 ça s'applique sur le site, et si la synchronisation (⚙) est déjà configurée, ça part aussi vers `docs/criteria.json`.
 
-Une petite mascotte (dessinée pour ce site, `#mascotte-def` dans `docs/index.html` — pas le personnage du manga
-d'inspiration) flotte en bas de l'écran et ouvre le même chat. Elle apparaît aussi à côté du panneau « Mes critères » et
+Une petite mascotte (`docs/mascotte.webp` — image fournie par Sacha, recadrée et réduite pour le web depuis
+`il_fullxfull.7846345879_12sa.webp`, 3000×3000 sans transparence à l'origine ; **origine et droits de réutilisation à
+confirmer avec Sacha**, notamment parce que ce dépôt est public) flotte en bas de l'écran et ouvre le même chat.
+Elle apparaît aussi à côté du panneau « Mes critères » et
 sur chaque annonce, pour montrer que tout est modifiable en discutant. Une bulle d'accueil (une fois par appareil)
 explique la transparence : ce qu'elle dit au bot et ses ♥ / ✕ / notes sont vus par Sacha. Après un changement de critères,
 une bulle légère (👍/👎, une fois par appareil) récolte un avis rapide.

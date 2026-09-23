@@ -19,19 +19,6 @@
       <path d="M0 8 H84 M116 8 H200" stroke="currentColor" stroke-width="1" fill="none"/>
       <path d="M100 2 L106 8 L100 14 L94 8 Z" fill="currentColor"/>
     </symbol>
-    <!-- Mascotte originale (oreilles pointues, queue en cœur) inspirée de l'ambiance de Chocola & Vanilla,
-         dessinée pour ce site — ce n'est pas le personnage du manga. -->
-    <symbol id="mascotte-def" viewBox="0 0 100 100">
-      <path d="M28 30 14 6c14-2 20 6 22 14z" fill="currentColor"/>
-      <path d="M72 30 86 6c-14-2-20 6-22 14z" fill="currentColor"/>
-      <ellipse cx="50" cy="56" rx="34" ry="30" fill="currentColor"/>
-      <path d="M50 74c10 0 22 6 24 16-10 4-34 4-48 0 2-10 14-16 24-16z" fill="currentColor"/>
-      <circle class="mascotte-oeil" cx="39" cy="52" r="5" fill="var(--surface)"/>
-      <circle class="mascotte-oeil" cx="61" cy="52" r="5" fill="var(--surface)"/>
-      <path d="M50 60c-2.5 0-4 1.6-4 3.4 0 2.4 2.4 4 4 5.2 1.6-1.2 4-2.8 4-5.2 0-1.8-1.5-3.4-4-3.4z" fill="var(--surface)"/>
-      <path d="M82 60c8 2 14 10 12 20-6-1-14-8-15-16z" fill="currentColor"/>
-      <path d="M96 78c-2.5-2.5-6-2.5-8 0-2-2.5-5.5-2.5-8 0-1.6 1.6-1.6 5 0 7.4 2 3 8 6.6 8 6.6s6-3.6 8-6.6c1.6-2.4 1.6-5.8 0-7.4z" fill="currentColor"/>
-    </symbol>
   </svg>
 
   <header class="top">
@@ -54,7 +41,7 @@
     <details id="criteres" class="panel" open>
       <summary>Mes critères <span id="resume-criteres"></span>
         <a href="#" id="criteres-mascotte" class="mascotte-lien" title="Demander à Claude d'ajuster ça pour moi">
-          <svg width="18" height="18" aria-hidden="true"><use href="#mascotte-def"></use></svg></a>
+          <img src="mascotte.webp" width="18" height="18" alt="" aria-hidden="true"></a>
       </summary>
 
       <section>
@@ -164,7 +151,7 @@
   </dialog>
 
   <button type="button" id="mascotte-flottante" class="mascotte-flottante" title="Discuter avec le bot" aria-label="Ouvrir le chat">
-    <svg width="34" height="34" aria-hidden="true"><use href="#mascotte-def"></use></svg>
+    <img src="mascotte.webp" width="44" height="44" alt="">
   </button>
   <div id="mascotte-bulle" class="mascotte-bulle" hidden role="status"></div>
 

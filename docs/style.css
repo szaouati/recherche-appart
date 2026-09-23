@@ -185,22 +185,24 @@ dialog:has(.dlg.wide) { width: min(720px, calc(100vw - 24px)); }
 .note-bloc { margin-top: 10px; font-size: 13px; }
 .note-bloc summary { cursor: pointer; color: var(--muted); }
 .note-bloc textarea { width: 100%; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; resize: vertical; min-height: 60px; }
-.mascotte-mini svg { display: block; color: currentColor; vertical-align: -3px; }
+.mascotte-mini { padding: 3px; width: 26px; height: 26px; display: inline-grid; place-items: center; }
+.mascotte-mini img { display: block; width: 18px; height: 18px; border-radius: 50%; }
 
-/* --- Mascotte --- */
-.mascotte-lien { display: inline-flex; margin-left: 6px; color: var(--gold); vertical-align: -4px; opacity: 0.85; }
+/* --- Mascotte : illustration (docs/mascotte.webp, fond blanc opaque) posée sur un disque clair
+   cerclé d'or, plutôt que teintée en aplat comme l'était l'ancien pictogramme SVG. --- */
+.mascotte-lien { display: inline-flex; margin-left: 6px; opacity: 0.9; }
 .mascotte-lien:hover { opacity: 1; }
+.mascotte-lien img { display: block; border-radius: 50%; }
 .mascotte-flottante {
   position: fixed; right: 18px; bottom: 18px; z-index: 20; width: 60px; height: 60px; border-radius: 50%;
-  background: var(--accent); color: var(--accent-ink); border: 2px solid var(--gold); cursor: pointer;
+  background: var(--surface); border: 2px solid var(--gold); cursor: pointer; padding: 0; overflow: hidden;
   display: grid; place-items: center; box-shadow: 0 4px 16px rgba(60, 20, 30, 0.3);
   animation: mascotte-respire 3.4s ease-in-out infinite;
 }
+.mascotte-flottante img { width: 100%; height: 100%; object-fit: cover; }
 .mascotte-flottante:hover { animation-play-state: paused; transform: scale(1.06); }
-.mascotte-flottante .mascotte-oeil { animation: mascotte-clin 5s ease-in-out infinite; transform-origin: center; }
-@keyframes mascotte-respire { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@keyframes mascotte-clin { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.15); } }
-@media (prefers-reduced-motion: reduce) { .mascotte-flottante, .mascotte-flottante .mascotte-oeil { animation: none; } }
+@keyframes mascotte-respire { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-4px) rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) { .mascotte-flottante { animation: none; } }
 
 .mascotte-bulle {
   position: fixed; right: 16px; bottom: 88px; z-index: 21; max-width: min(300px, calc(100vw - 32px));
