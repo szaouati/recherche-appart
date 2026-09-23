@@ -3,6 +3,25 @@
   "notes": {},
   "manuel": [
     {
+      "id": "manuel:1790178216219",
+      "source": "Manuel",
+      "url": "https://www.leboncoin.fr/recherche?category=10&locations=Paris_75018__48.89247_2.34464_2141&price=0-900&square=10-max&real_estate_type=2",
+      "title": "Leboncoin (recherche) — 500€, 22m², 2p — Simplon-Poissonniers, dernier étage",
+      "price": 500,
+      "surface": 22,
+      "rooms": 2,
+      "arrondissement": 18,
+      "floor": 4,
+      "elevator": null,
+      "dpe": null,
+      "furnished": null,
+      "features": {},
+      "first_seen": "2026-09-23T15:43:36.219Z",
+      "last_seen": "2026-09-23T15:43:36.219Z",
+      "publishedAt": "2026-09-23T15:43:36.219Z",
+      "photo": null
+    },
+    {
       "id": "manuel:1790178011317",
       "source": "Manuel",
       "url": "https://www.pap.fr/annonces/appartement-paris-18e-75018-r465301195",
@@ -61,5 +80,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-23T15:40:12.646Z"
+  "updatedAt": "2026-09-23T15:43:36.525Z"
 }
