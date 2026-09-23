@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { mergeCriteria, checkHard, scoreListing, rankListings, verdictScore } from '../docs/score.mjs';
 import { extractFeatures } from '../collector/lib/features.mjs';
 
-const c = mergeCriteria({ budgetMax: 1500, surfaceMin: 30, piecesMin: 2 });
+// Critères explicites et complets pour les tests : ne jamais compter sur le contenu de
+// DEFAULT_CRITERIA (ce sont les vrais critères de Tabatha, amenés à changer avec sa recherche).
+const c = mergeCriteria({ budgetMax: 1500, surfaceMin: 30, piecesMin: 2, arrondissements: [], arrondissementsPref: [] });
 const base = { id: 'a', price: 1200, surface: 40, rooms: 2, floor: 4, elevator: true, dpe: 'C', arrondissement: 11, features: { balcon: true, lumineux: true }, first_seen: '2026-09-21' };
 
 test('filtre : budget dépassé', () => {
@@ -21,7 +23,7 @@ test('filtre : RDC et DPE G écartés par défaut', () => {
   assert.equal(checkHard({ ...base, dpe: 'G' }, c).ok, false);
 });
 test('filtre : arrondissements autorisés', () => {
-  const c2 = mergeCriteria({ arrondissements: [10, 11] });
+  const c2 = mergeCriteria({ budgetMax: 1500, surfaceMin: 30, piecesMin: 2, arrondissements: [10, 11] });
   assert.equal(checkHard({ ...base, arrondissement: 11 }, c2).ok, true);
   assert.equal(checkHard({ ...base, arrondissement: 16 }, c2).ok, false);
 });

@@ -1,12 +1,18 @@
 // Moteur de filtrage + score, partagé entre le site (navigateur) et le bot (Node).
 // Une seule implémentation : le site et l'alerte Telegram classent donc toujours pareil.
 
+// Valeurs de base = les derniers critères réels que Tabatha a transmis (22/09/2026 : 18e, ≤ 900 €,
+// studio à partir de 10 m²), pas des valeurs génériques. Elles servent de repli (mergeCriteria) et de
+// point de départ pour tout appareil qui n'a encore rien en mémoire locale — donc aussi pour ceux qui
+// ne consultent le site que ponctuellement (ex. Sacha) sans avoir synchronisé ses réglages à elle.
+// À maintenir à jour à la main si ses critères changent durablement (docs/criteria.json reste la
+// source de vérité pour le bot ; ceci n'est que le filet de sécurité du code).
 export const DEFAULT_CRITERIA = {
-  budgetMax: 1500, // € / mois, charges comprises
-  surfaceMin: 30, // m²
-  piecesMin: 2,
-  arrondissements: [], // vide = tout Paris
-  arrondissementsPref: [], // bonus si l'annonce est dans l'un d'eux
+  budgetMax: 900, // € / mois, charges comprises
+  surfaceMin: 10, // m²
+  piecesMin: 1,
+  arrondissements: [18],
+  arrondissementsPref: [18],
   meuble: 'indifferent', // 'oui' | 'non' | 'indifferent'
   exclure: { rdc: true, dpeFG: true, coloc: true },
   poids: {
@@ -26,7 +32,7 @@ export const DEFAULT_CRITERIA = {
     parquet: 1,
   },
   alerteActive: true,
-  alerteScoreMin: 55,
+  alerteScoreMin: 45,
 };
 
 // Libellés affichés dans le site pour chaque critère pondéré.

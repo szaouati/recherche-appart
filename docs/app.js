@@ -341,6 +341,24 @@ function brancher() {
     render();
   });
 
+  $('#btn-recharger-criteres').addEventListener('click', async () => {
+    // L'appli ne va chercher docs/criteria.json qu'à la toute première visite d'un appareil ; ce
+    // bouton force un rechargement explicite, utile pour qui consulte le site sans être Tabatha
+    // elle-même (ses propres réglages locaux à elle ne sont jamais écrasés silencieusement).
+    if (!confirm('Recharger les critères actuels du bot ? Ça remplace les réglages de CET appareil.')) return;
+    try {
+      const r = await fetch(`criteria.json?t=${Date.now()}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      criteria = mergeCriteria(await r.json());
+      store.set('criteria', criteria);
+      remplirFormulaire();
+      limite = 30;
+      render();
+    } catch (e) {
+      alert(`Échec du rechargement (${e.message}).`);
+    }
+  });
+
   $('#btn-settings').addEventListener('click', () => {
     const r = reglages();
     const f = $('#form-settings');
