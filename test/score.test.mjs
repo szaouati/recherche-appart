@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mergeCriteria, checkHard, scoreListing, rankListings } from '../docs/score.mjs';
+import { mergeCriteria, checkHard, scoreListing, rankListings, verdictScore } from '../docs/score.mjs';
 import { extractFeatures } from '../collector/lib/features.mjs';
 
 const c = mergeCriteria({ budgetMax: 1500, surfaceMin: 30, piecesMin: 2 });
@@ -39,6 +39,22 @@ test('classement : les rejetées n\'ont pas de score et passent en dernier', () 
   const { listings } = rankListings([{ ...base, id: 'x', price: 9999 }, base], c);
   assert.equal(listings[0].id, 'a');
   assert.equal(listings[1].score, null);
+});
+test('classement : rangOk/totalOk posés sur les retenues seulement', () => {
+  const { listings } = rankListings([{ ...base, id: 'x', price: 9999 }, base, { ...base, id: 'b' }], c);
+  const ok = listings.filter((l) => l.ok);
+  assert.equal(ok.length, 2);
+  assert.deepEqual(ok.map((l) => l.rangOk), [0, 1]);
+  assert.ok(ok.every((l) => l.totalOk === 2));
+  assert.equal(listings.find((l) => l.id === 'x').rangOk, undefined);
+});
+test('verdict : rang 0 = meilleure option, dernier rang = loin des critères', () => {
+  assert.equal(verdictScore(0, 10).label, 'Sa meilleure option pour l’instant');
+  assert.equal(verdictScore(9, 10).tier, 'bas');
+  assert.equal(verdictScore(0, 1).tier, 'haut'); // seule annonce retenue : pas de comparatif possible
+});
+test('verdict : un lot vide ne fait pas planter l\'appel', () => {
+  assert.equal(verdictScore(null, null).tier, 'bas');
 });
 test('features : négation et accents', () => {
   assert.equal(extractFeatures('Studio', 'Sans balcon, pas d\'ascenseur').balcon, undefined);

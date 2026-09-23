@@ -78,8 +78,65 @@ function corsHeaders(origin, allowed) {
 
 const json = (obj, status, headers) => new Response(JSON.stringify(obj), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
 
+// --- Journal partagé -------------------------------------------------------------------------
+// Chaque échange avec le bot et chaque action notable de Tabatha dans l'appli (♥, ✕, note,
+// changement de critères) est ajouté à docs/data/journal.json dans le dépôt, en tâche de fond
+// (ctx.waitUntil) : jamais bloquant, jamais fatal pour la réponse au navigateur si ça échoue —
+// c'est un journal utile pour Sacha, pas une fonctionnalité vitale de l'appli.
+const MAX_ENTRIES = 600;
+
+async function lireFichierGitHub(env) {
+  const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${env.JOURNAL_PATH}`;
+  const headers = { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'recherche-appart-bot' };
+  const r = await fetch(url, { headers });
+  if (r.status === 404) return { sha: undefined, data: { entries: [] } };
+  if (!r.ok) throw new Error(`GitHub GET ${r.status}`);
+  const body = await r.json();
+  let data;
+  try {
+    data = JSON.parse(decodeURIComponent(escape(atob(body.content))));
+  } catch {
+    data = { entries: [] };
+  }
+  if (!Array.isArray(data.entries)) data.entries = [];
+  return { sha: body.sha, data };
+}
+
+async function ecrireFichierGitHub(env, data, sha) {
+  const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${env.JOURNAL_PATH}`;
+  const headers = { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'recherche-appart-bot' };
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + '\n')));
+  return fetch(url, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ message: `Journal : ${data.entries.at(-1)?.kind ?? 'mise à jour'}`, content, sha, branch: 'main' }),
+  });
+}
+
+async function appendJournal(env, entry) {
+  if (!env.GITHUB_TOKEN) return; // pas encore configuré : on n'échoue pas bruyamment pour autant
+  try {
+    const { sha, data } = await lireFichierGitHub(env);
+    data.entries.push({ ts: new Date().toISOString(), ...entry });
+    data.entries = data.entries.slice(-MAX_ENTRIES);
+    let res = await ecrireFichierGitHub(env, data, sha);
+    if (res.status === 409) {
+      // Deux écritures concurrentes (ex. un tap ♥ juste après une réponse du chat) : on relit et on réessaie une fois.
+      const retry = await lireFichierGitHub(env);
+      retry.data.entries.push({ ts: new Date().toISOString(), ...entry });
+      retry.data.entries = retry.data.entries.slice(-MAX_ENTRIES);
+      res = await ecrireFichierGitHub(env, retry.data, retry.sha);
+    }
+    if (!res.ok) console.error('journal: écriture GitHub échouée', res.status, await res.text());
+  } catch (e) {
+    console.error('journal: erreur', e);
+  }
+}
+
+const TYPES_EVENEMENT = ['fav', 'ecarte', 'note', 'critere_change', 'ajout_manuel', 'avis'];
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const allowed = (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
     const origin = request.headers.get('Origin') || '';
     const headers = corsHeaders(origin, allowed);
@@ -102,6 +159,23 @@ export default {
       body = await request.json();
     } catch {
       return json({ error: 'JSON invalide' }, 400, headers);
+    }
+
+    // Simple fait à consigner (♥ / ✕ / note / critères / ajout manuel) : pas d'appel à Claude,
+    // juste un ajout au journal. Réponse immédiate, écriture en tâche de fond.
+    if (body.kind === 'event') {
+      const type = TYPES_EVENEMENT.includes(body.type) ? body.type : null;
+      if (!type) return json({ error: 'Type d\'événement inconnu' }, 400, headers);
+      let payload = body.payload && typeof body.payload === 'object' ? body.payload : {};
+      try {
+        const s = JSON.stringify(payload);
+        if (s.length > 4000) payload = { tronque: true, apercu: s.slice(0, 500) };
+      } catch {
+        payload = {};
+      }
+      const criteria = mergeCriteria(body.criteria && typeof body.criteria === 'object' ? body.criteria : {});
+      ctx.waitUntil(appendJournal(env, { kind: 'event', type, payload, criteria }));
+      return json({ ok: true }, 200, headers);
     }
 
     const message = String(body.message ?? '').slice(0, MAX_MSG_LEN).trim();
@@ -137,7 +211,9 @@ export default {
     const texte = (data.content ?? []).filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
     const outil = (data.content ?? []).find((b) => b.type === 'tool_use' && b.name === 'propose_criteria');
     const proposal = outil ? validerProposition(outil.input, actuel) : null;
+    const reply = texte || (proposal ? 'Voilà ce que je te propose :' : '…');
 
-    return json({ reply: texte || (proposal ? 'Voilà ce que je te propose :' : '…'), proposal }, 200, headers);
+    ctx.waitUntil(appendJournal(env, { kind: 'chat', message, reply, proposal, criteria: actuel }));
+    return json({ reply, proposal }, 200, headers);
   },
 };

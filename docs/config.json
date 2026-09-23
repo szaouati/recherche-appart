@@ -1,6 +1,4 @@
 {
-  "contactEmail": "",
-  "alertEmail": "",
   "botUrl": "https://recherche-appart-bot.sacha-zaouati.workers.dev",
   "botToken": "de3ec2ec836935055bb7336acda521146f9dce2aee88f41c"
 }

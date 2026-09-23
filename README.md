@@ -19,7 +19,7 @@ GitHub Actions (cron 30 min)  →  collector/collect.mjs  →  docs/data/listing
 |---|---|---|
 | Bien'ici | ✅ branchée, testée | API JSON du site. Agrège de nombreux réseaux d'agences. ~490 annonces parisiennes ≤ 1 500 € et ≥ 30 m² au 21/09/2026. |
 | PAP, SeLoger, Leboncoin (accès direct) | ❌ bloqué | HTTP 403 dès la première requête, même avec des en-têtes de navigateur. Anti-bot + CGU. Non contournable proprement depuis GitHub Actions. |
-| Alertes e-mail (PAP, SeLoger, Leboncoin, Jinka) | ⏳ à faire | Voie recommandée pour les particuliers. Voir plus bas. |
+| Alertes e-mail (PAP, SeLoger) | 📬 alertes reçues, pas encore lues par le bot | Créées sur `alertes.appart.tabatha@gmail.com`, opérationnelles depuis le 22/09/2026. Reste à écrire `collector/sources/email.mjs`. Voir « Phase 2 ». |
 | Ajout manuel (Facebook, bouche-à-oreille) | ✅ | Bouton « + Ajouter une annonce » sur le site. Stocké dans le navigateur de Tabatha. |
 
 ## Mise en ligne
@@ -56,20 +56,34 @@ Le site classe déjà avec les critères réglés dans le navigateur. Pour que l
 - Automatiquement quand elle valide une proposition du bot Claude (ci-dessous), si la synchronisation est
   déjà configurée dans ⚙ ; sinon le message le lui rappelle.
 
-### « Ma recherche en détail » (retour de Tabatha vers Sacha)
+> **Historique :** un questionnaire « Ma recherche en détail » (formulaire + envoi manuel du récapitulatif à Sacha) a existé
+> jusqu'au 23/09/2026. Retiré : elle ne parle plus qu'au bot Claude, et tout ce qui compte part automatiquement dans le
+> journal partagé (ci-dessous) — plus besoin qu'elle envoie quoi que ce soit elle-même.
 
-Le bouton du même nom ouvre un questionnaire libre (rédhibitoires, quartiers, trajet, dates, budget « coup de cœur »…). Il génère un
-récapitulatif texte = critères chiffrés + réponses + JSON prêt à coller dans `docs/criteria.json`. Elle l'envoie via le bouton de
-partage du téléphone (WhatsApp, iMessage…) ou le bouton « Copier ». Réponses stockées uniquement dans son navigateur.
-
-`docs/config.json` (facultatif) : `contactEmail` ajoute un bouton « Envoyer par e-mail » ; `alertEmail` affiche l'adresse dédiée
-dans l'assistant d'alertes. Ces deux valeurs sont **publiques** (dépôt public) : ne les renseigne que si tu l'acceptes.
-
-### Bot Claude (« Demander à Claude »)
+### Bot Claude (« Demander à Claude ») et la mascotte
 
 Un widget de chat dans le site : Tabatha discute pour ajuster ses critères, Claude répond et — si elle demande clairement
 un changement — propose un nouveau réglage complet (diff affiché : « Budget max : 900 € → 850 € »). Elle valide d'un tap ;
 ça s'applique sur le site, et si la synchronisation (⚙) est déjà configurée, ça part aussi vers `docs/criteria.json`.
+
+Une petite mascotte (dessinée pour ce site, `#mascotte-def` dans `docs/index.html` — pas le personnage du manga
+d'inspiration) flotte en bas de l'écran et ouvre le même chat. Elle apparaît aussi à côté du panneau « Mes critères » et
+sur chaque annonce, pour montrer que tout est modifiable en discutant. Une bulle d'accueil (une fois par appareil)
+explique la transparence : ce qu'elle dit au bot et ses ♥ / ✕ / notes sont vus par Sacha. Après un changement de critères,
+une bulle légère (👍/👎, une fois par appareil) récolte un avis rapide.
+
+### Journal partagé (`docs/data/journal.json`)
+
+Remplace l'ancien envoi manuel : chaque échange de chat, et chaque action notable (♥ garder, ✕ écarter, note personnelle
+sur une annonce, changement de critères — panneau ou bot —, ajout manuel, avis 👍/👎 à la mascotte) est ajouté par le
+**Worker** à `docs/data/journal.json`, en tâche de fond (`ctx.waitUntil`, jamais bloquant pour elle). Fichier plafonné aux
+600 dernières entrées. Sacha (et Claude Code, voir `CLAUDE.md`) le lit directement dans le dépôt — pas besoin qu'elle
+envoie quoi que ce soit. Nécessite le secret `GITHUB_TOKEN` du Worker (voir plus bas) ; sans lui, le journal reste vide
+mais rien d'autre n'est affecté (échec silencieux, par design).
+
+**Limite assumée :** chaque événement crée un commit sur le dépôt public (mécanisme testé, voir plus bas) — l'historique
+Git se remplit vite. Pour un outil à usage strictement personnel, ce n'est pas gênant ; à reconsidérer (squash périodique,
+ou déplacer vers une vraie base) si ça devient pénible.
 
 **Architecture** — le site est public et statique (GitHub Pages) : une clé Anthropic posée dedans serait lisible par
 n'importe qui. Elle reste donc côté serveur, dans un petit **Worker Cloudflare** (`worker/`) qui sert de relais :
@@ -85,6 +99,8 @@ Site (navigateur) → Worker Cloudflare (clé Claude en secret) → API Anthropi
   transmettre au navigateur — jamais de confiance aveugle dans la sortie du modèle.
 - Testé le 22/09/2026 en conditions réelles : changement de critère bien interprété (budget vs préférence
   d'arrondissement distingués), question simple sans proposition, refus poli d'une demande hors sujet.
+- Testé le 23/09/2026 après ajout du journal : l'endpoint `{"kind":"event",...}` répond `{"ok":true}` sans
+  `GITHUB_TOKEN` (n'échoue pas), rejette un type d'événement inconnu (400), et le chat continue de fonctionner.
 
 **Déploiement / maintenance** (`worker/`) :
 ```bash
@@ -92,12 +108,19 @@ cd worker
 npx wrangler login                          # une fois, ouvre le navigateur (compte Cloudflare)
 npx wrangler deploy                         # publie/republie le Worker
 npx wrangler secret put ANTHROPIC_API_KEY   # colle la clé quand demandé — jamais ailleurs
-npx wrangler secret list                    # vérifie qu'il existe, sans jamais l'afficher
+npx wrangler secret put GITHUB_TOKEN        # pour que le journal puisse écrire sur le dépôt (voir ci-dessous)
+npx wrangler secret list                    # vérifie qu'ils existent, sans jamais les afficher
 npx wrangler tail                           # logs en direct, utile en cas de souci
 ```
 Après un premier déploiement, reporter l'URL affichée dans `docs/config.json` (`botUrl`). `botToken` doit être identique
 à `APP_TOKEN` dans `worker/wrangler.jsonc`. Coût : gratuit à ce volume (palier gratuit Workers + rate limiting), seul
 l'usage de l'API Anthropic est facturé à Sacha (modèle Haiku, conversations courtes → quelques centimes au pire).
+
+**`GITHUB_TOKEN`** — un jeton fine-grained ne peut être créé que depuis l'interface web GitHub, pas en CLI :
+1. `github.com/settings/personal-access-tokens/new` → *Repository access* : « Only select repositories » →
+   `szaouati/recherche-appart` uniquement.
+2. *Permissions* → *Repository permissions* → **Contents : Read and write**. Rien d'autre.
+3. Générer, copier, puis `npx wrangler secret put GITHUB_TOKEN` dans `worker/` et le coller quand demandé.
 
 ## Utilisation locale
 
@@ -106,7 +129,7 @@ node collector/collect.mjs            # collecte complète (~6 s) et écrit docs
 node collector/collect.mjs --quick    # seulement les annonces les plus récentes
 node collector/collect.mjs --dry      # simulation : n'écrit rien, n'envoie rien, affiche les alertes
 python3 -m http.server 8765 --directory docs   # puis http://localhost:8765
-node --test test/*.test.mjs           # 8 tests (filtres, score, détection de caractéristiques)
+node --test test/*.test.mjs           # 11 tests (filtres, score, verdicts, détection de caractéristiques)
 ```
 
 ## Comment l'annonce est notée
@@ -114,13 +137,17 @@ node --test test/*.test.mjs           # 8 tests (filtres, score, détection de c
 1. **Filtres stricts** (budget, surface, pièces, arrondissements, meublé, RDC, DPE F/G, colocation) : une annonce qui
    échoue est écartée, avec la raison visible (« Pourquoi écartée ? »). Une donnée **absente** ne disqualifie pas :
    l'annonce reste, marquée « À vérifier ».
-2. **Score 0-100** = Σ(poids × valeur) / Σ(poids), poids de 0 à 5 réglables. Ce qui n'apparaît pas dans l'annonce vaut 0
-   (on ne devine pas). Le détail par critère est dépliable sur chaque carte.
+2. **Score 0-100** en interne = Σ(poids × valeur) / Σ(poids), poids de 0 à 5 réglables. Ce qui n'apparaît pas dans
+   l'annonce vaut 0 (on ne devine pas). **Ce chiffre n'est plus affiché à Tabatha** : depuis le 23/09/2026,
+   `verdictScore(rang, total)` (`docs/score.mjs`) le traduit en avis relatif au marché disponible (« Sa meilleure
+   option pour l'instant », « Lui correspond très bien », « Un bon compromis », « Passable pour elle », « Assez loin
+   de ses critères »), calculé sur le **rang** parmi les annonces retenues plutôt que sur une note absolue — utile
+   dans un marché tendu où le meilleur score réel peut être bas. Le détail chiffré par critère reste disponible dans
+   « Pourquoi cet avis ? » pour qui veut creuser.
 3. Les caractéristiques « balcon », « lumineux », « calme », etc. sont lues **dans le texte** de l'annonce (avec gestion des
    négations : « sans balcon »). C'est une heuristique, pas une donnée structurée.
 
-Calibrage : sur les données du 21/09/2026, le meilleur score est ~71 et 10 % des annonces retenues dépassent 54. D'où le
-seuil d'alerte par défaut à 55. À ajuster avec l'usage.
+Seuil d'alerte Telegram par défaut : 55/100 (score interne, indépendant du libellé affiché). À ajuster avec l'usage.
 
 ## Limites connues
 
@@ -130,7 +157,9 @@ seuil d'alerte par défaut à 55. À ajuster avec l'usage.
   Elles sont ignorées (hypothèse : annonces périmées), ainsi que toute annonce publiée il y a plus de 75 jours.
 - **Doublons** : une même annonce postée par plusieurs agences est repérée par (prix, surface, arrondissement, étage,
   pièces) et masquée. Clé volontairement prudente : elle ne s'applique que si tous ces champs sont connus.
-- **Favoris / écartées / annonces manuelles** sont stockés dans le navigateur (localStorage), donc par appareil.
+- **Favoris / écartées / notes / annonces manuelles** sont stockés dans le navigateur (localStorage), donc par appareil —
+  si elle utilise le site sur deux appareils, chacun a son propre état. Ces actions sont aussi envoyées au journal
+  partagé (ci-dessus), donc Sacha les voit même si elles ne sont pas synchronisées entre ses appareils à elle.
 - **Pas de proximité métro** : il faudrait croiser avec les données de stations, non fait dans le prototype.
 - **Fraîcheur GitHub Actions** : les crons peuvent être retardés de plusieurs minutes aux heures de pointe.
 
@@ -142,10 +171,17 @@ derrière Cloudflare Access. La page contient `noindex` mais ce n'est pas une pr
 
 ## Phase 2 : alertes e-mail (PAP, SeLoger, Leboncoin)
 
-Principe : une adresse dédiée reçoit les alertes créées par Tabatha sur chaque site (ou une alerte Jinka, qui regroupe
-plusieurs sources). Une source `collector/sources/email.mjs` lit la boîte en IMAP, extrait lien / prix / surface / arrondissement
-de chaque annonce, et les injecte dans le même pipeline (donc même score, même alerte Telegram).
+Adresse dédiée `alertes.appart.tabatha@gmail.com`, créée le 22/09/2026, alertes PAP et SeLoger opérationnelles depuis le
+22/09/2026 (Leboncoin à créer). Une source `collector/sources/email.mjs` (à écrire) lira ces e-mails et extraira lien /
+prix / surface / arrondissement de chaque annonce, pour les injecter dans le même pipeline (donc même score, même alerte
+Telegram, mêmes filtres).
 
-Ce qui manque pour l'écrire correctement : **un vrai e-mail d'alerte de chaque site**. Le format de chaque expéditeur est
-différent, et les liens SeLoger passent par un redirecteur de suivi (l'identifiant de l'annonce doit en être extrait pour éviter
-les doublons). Écrire le parseur à l'aveugle donnerait du code non vérifié.
+Extraction envisagée via l'API Claude (un appel structuré par e-mail, plutôt qu'un analyseur regex par site — plus robuste
+aux changements de template, pas besoin de code spécifique par expéditeur) : clé `ANTHROPIC_API_KEY` en secret GitHub
+Actions (jamais côté navigateur), valeurs reclampées après coup comme le fait déjà `worker/src/index.mjs` pour les
+critères, contenu de l'e-mail traité comme une donnée non fiable et jamais comme des instructions.
+
+Accès à la boîte : le connecteur Gmail d'une session Claude Code peut être relié directement à
+`alertes.appart.tabatha@gmail.com` (confirmé le 23/09/2026) — à revérifier si beaucoup de temps a passé avant de lire
+quoi que ce soit. Sinon, IMAP classique avec les secrets `IMAP_USER` / `IMAP_APP_PASSWORD` (déjà enregistrés le
+22/09/2026). Voir `CLAUDE.md` § pipeline e-mail pour la suite.

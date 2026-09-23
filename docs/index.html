@@ -19,6 +19,19 @@
       <path d="M0 8 H84 M116 8 H200" stroke="currentColor" stroke-width="1" fill="none"/>
       <path d="M100 2 L106 8 L100 14 L94 8 Z" fill="currentColor"/>
     </symbol>
+    <!-- Mascotte originale (oreilles pointues, queue en cœur) inspirée de l'ambiance de Chocola & Vanilla,
+         dessinée pour ce site — ce n'est pas le personnage du manga. -->
+    <symbol id="mascotte-def" viewBox="0 0 100 100">
+      <path d="M28 30 14 6c14-2 20 6 22 14z" fill="currentColor"/>
+      <path d="M72 30 86 6c-14-2-20 6-22 14z" fill="currentColor"/>
+      <ellipse cx="50" cy="56" rx="34" ry="30" fill="currentColor"/>
+      <path d="M50 74c10 0 22 6 24 16-10 4-34 4-48 0 2-10 14-16 24-16z" fill="currentColor"/>
+      <circle class="mascotte-oeil" cx="39" cy="52" r="5" fill="var(--surface)"/>
+      <circle class="mascotte-oeil" cx="61" cy="52" r="5" fill="var(--surface)"/>
+      <path d="M50 60c-2.5 0-4 1.6-4 3.4 0 2.4 2.4 4 4 5.2 1.6-1.2 4-2.8 4-5.2 0-1.8-1.5-3.4-4-3.4z" fill="var(--surface)"/>
+      <path d="M82 60c8 2 14 10 12 20-6-1-14-8-15-16z" fill="currentColor"/>
+      <path d="M96 78c-2.5-2.5-6-2.5-8 0-2-2.5-5.5-2.5-8 0-1.6 1.6-1.6 5 0 7.4 2 3 8 6.6 8 6.6s6-3.6 8-6.6c1.6-2.4 1.6-5.8 0-7.4z" fill="currentColor"/>
+    </symbol>
   </svg>
 
   <header class="top">
@@ -30,7 +43,6 @@
     </div>
     <div class="top-actions">
       <button class="btn primary" id="btn-bot">Demander à Claude</button>
-      <button class="btn primary" id="btn-profil">Ma recherche en détail</button>
       <button class="btn" id="btn-add">+ Ajouter une annonce</button>
       <button class="btn ghost" id="btn-settings" title="Réglages de synchronisation" aria-label="Réglages">⚙</button>
     </div>
@@ -40,7 +52,10 @@
 
   <main class="layout">
     <details id="criteres" class="panel" open>
-      <summary>Mes critères <span id="resume-criteres"></span></summary>
+      <summary>Mes critères <span id="resume-criteres"></span>
+        <a href="#" id="criteres-mascotte" class="mascotte-lien" title="Demander à Claude d'ajuster ça pour moi">
+          <svg width="18" height="18" aria-hidden="true"><use href="#mascotte-def"></use></svg></a>
+      </summary>
 
       <section>
         <h2>Indispensable</h2>
@@ -133,35 +148,11 @@
     </form>
   </dialog>
 
-  <dialog id="dlg-profil">
-    <div class="dlg wide">
-      <div class="dlg-head"><h2>Ma recherche en détail</h2><button class="btn ghost small" id="profil-close" type="button">Fermer</button></div>
-      <svg class="flourish flourish--sm flourish--left" aria-hidden="true"><use href="#flourish-def"></use></svg>
-      <p class="hint">Réponds comme tu veux, même en quelques mots. Tout est enregistré sur cet appareil, et rien n'est envoyé tant que tu n'as pas appuyé sur le bouton d'envoi.</p>
-
-      <h3>1. Ce que je veux vraiment</h3>
-      <div id="profil-champs" class="profil-champs"></div>
-
-      <h3>2. Le récapitulatif</h3>
-      <p class="hint">Il reprend les critères réglés sur la page, plus tes réponses ci-dessus.</p>
-      <textarea id="recap" readonly rows="12" aria-label="Récapitulatif de ma recherche"></textarea>
-      <div class="dlg-actions">
-        <a class="btn" id="btn-mail" hidden>Envoyer par e-mail</a>
-        <button class="btn" id="btn-copy" type="button">Copier</button>
-        <button class="btn primary" id="btn-share" type="button" hidden>Envoyer à Sacha</button>
-      </div>
-      <p class="hint" id="recap-etat" role="status"></p>
-
-      <h3>3. Mes alertes e-mail sur les autres sites</h3>
-      <div id="alertes"></div>
-    </div>
-  </dialog>
-
   <dialog id="dlg-bot">
     <div class="dlg wide bot-dlg">
       <div class="dlg-head"><h2>Demander à Claude</h2><button class="btn ghost small" id="bot-close" type="button">Fermer</button></div>
       <svg class="flourish flourish--sm flourish--left" aria-hidden="true"><use href="#flourish-def"></use></svg>
-      <p class="hint">Pour ajuster tes critères en discutant. Il ne fait que ça ici : pour le reste, écris à Sacha.</p>
+      <p class="hint">Dis-lui tout ce que tu veux changer ou ce que tu penses de ta recherche. Sacha voit cette conversation pour adapter le site — pour tout le reste, écris-lui directement.</p>
       <div id="bot-log" class="bot-log" aria-live="polite"></div>
       <div id="bot-proposal" class="bot-proposal" hidden></div>
       <form id="bot-form" class="bot-form">
@@ -171,6 +162,11 @@
       <p class="hint" id="bot-etat" role="status"></p>
     </div>
   </dialog>
+
+  <button type="button" id="mascotte-flottante" class="mascotte-flottante" title="Discuter avec le bot" aria-label="Ouvrir le chat">
+    <svg width="34" height="34" aria-hidden="true"><use href="#mascotte-def"></use></svg>
+  </button>
+  <div id="mascotte-bulle" class="mascotte-bulle" hidden role="status"></div>
 
   <script type="module" src="app.js"></script>
 </body>

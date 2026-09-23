@@ -7,7 +7,9 @@
   // le rate limiting ci-dessous + le prompt qui cantonne Claude à ce seul sujet + un modèle bon marché.
   "vars": {
     "ALLOWED_ORIGINS": "https://szaouati.github.io,http://localhost:8765",
-    "APP_TOKEN": "de3ec2ec836935055bb7336acda521146f9dce2aee88f41c"
+    "APP_TOKEN": "de3ec2ec836935055bb7336acda521146f9dce2aee88f41c",
+    "GITHUB_REPO": "szaouati/recherche-appart",
+    "JOURNAL_PATH": "docs/data/journal.json"
   },
   // 20 messages / minute par IP. period n'accepte que 10 ou 60 (contrainte Cloudflare).
   "ratelimits": [

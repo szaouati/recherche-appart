@@ -148,8 +148,7 @@ legend { font-size: 14px; padding: 0; margin-bottom: 6px; }
 /* Médaillon de score : anneau or/bordeaux façon bijou plutôt qu'un simple donut de dashboard. */
 .score { position: absolute; top: 12px; right: 12px; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; font: 600 17px var(--sans); background: conic-gradient(var(--c) calc(var(--s) * 1%), var(--chip) 0); box-shadow: 0 1px 3px rgba(60, 20, 30, 0.18); }
 .score::before { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: var(--surface); }
-.score span { position: relative; }
-.score .etoile { position: absolute; top: -7px; right: -7px; font-size: 14px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25)); }
+.score-icone { position: relative; font-size: 21px; line-height: 1; }
 .score.haut { --c: var(--accent); } .score.moyen { --c: var(--gold); } .score.bas { --c: var(--low); }
 
 .vide { text-align: center; color: var(--muted); padding: 48px 16px; }
@@ -173,17 +172,44 @@ dialog { max-height: calc(100vh - 32px); overflow: auto; }
 dialog:has(.dlg.wide) { width: min(720px, calc(100vw - 24px)); }
 .dlg h3 { margin: 10px 0 0; font: 600 16px var(--serif); }
 .dlg-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.profil-champs { display: grid; gap: 12px; }
-.profil-champs label { display: block; font-size: 14px; }
-.profil-champs textarea, #recap { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; margin-top: 4px; resize: vertical; }
-#recap { font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
-.site-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
-.site-card h4 { margin: 0 0 4px; font-size: 15px; }
-.site-card ol { margin: 6px 0 0; padding-left: 20px; font-size: 14px; }
-.site-card a.btn { display: inline-block; margin-top: 8px; text-decoration: none; }
-.recap-chip { display: inline-block; background: var(--chip); border-radius: 99px; padding: 3px 12px; font-size: 13px; margin: 2px 4px 2px 0; }
 
 .statut { font-weight: 500; color: var(--ink); }
+
+/* --- Avis en clair sur chaque carte (remplace la note brute) --- */
+.verdict { margin-top: 4px; font: 600 13.5px var(--sans); }
+.verdict-haut { color: var(--accent); }
+.verdict-moyen { color: var(--gold); }
+.verdict-bas { color: var(--muted); font-weight: 500; }
+
+/* --- Carnet : une note personnelle par annonce, partagée avec Sacha via le journal --- */
+.note-bloc { margin-top: 10px; font-size: 13px; }
+.note-bloc summary { cursor: pointer; color: var(--muted); }
+.note-bloc textarea { width: 100%; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; resize: vertical; min-height: 60px; }
+.mascotte-mini svg { display: block; color: currentColor; vertical-align: -3px; }
+
+/* --- Mascotte --- */
+.mascotte-lien { display: inline-flex; margin-left: 6px; color: var(--gold); vertical-align: -4px; opacity: 0.85; }
+.mascotte-lien:hover { opacity: 1; }
+.mascotte-flottante {
+  position: fixed; right: 18px; bottom: 18px; z-index: 20; width: 60px; height: 60px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-ink); border: 2px solid var(--gold); cursor: pointer;
+  display: grid; place-items: center; box-shadow: 0 4px 16px rgba(60, 20, 30, 0.3);
+  animation: mascotte-respire 3.4s ease-in-out infinite;
+}
+.mascotte-flottante:hover { animation-play-state: paused; transform: scale(1.06); }
+.mascotte-flottante .mascotte-oeil { animation: mascotte-clin 5s ease-in-out infinite; transform-origin: center; }
+@keyframes mascotte-respire { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes mascotte-clin { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.15); } }
+@media (prefers-reduced-motion: reduce) { .mascotte-flottante, .mascotte-flottante .mascotte-oeil { animation: none; } }
+
+.mascotte-bulle {
+  position: fixed; right: 16px; bottom: 88px; z-index: 21; max-width: min(300px, calc(100vw - 32px));
+  background: var(--surface); border: 1px solid var(--gold); border-radius: 16px 16px 4px 16px;
+  padding: 12px 14px; box-shadow: var(--shadow); font-size: 14px;
+}
+.mascotte-bulle p { margin: 0 0 8px; }
+.mascotte-bulle-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 480px) { .mascotte-flottante { right: 14px; bottom: 14px; width: 54px; height: 54px; } .mascotte-bulle { right: 10px; bottom: 78px; } }
 
 dialog#dlg-bot { height: min(640px, 80vh); }
 .bot-dlg { display: flex; flex-direction: column; height: 100%; }

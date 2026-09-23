@@ -141,5 +141,26 @@ export function rankListings(listings, criteria) {
 
   const out = hard.map(({ l, h }) => ({ ...l, ...h, ...(h.ok ? scoreListing(l, c, ctx) : { score: null, detail: [] }) }));
   out.sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || String(b.first_seen).localeCompare(String(a.first_seen)));
+
+  // Rang parmi les annonces retenues (0 = meilleure), pour un avis relatif au marché disponible
+  // plutôt qu'à une note absolue : une même annonce peut être « sa meilleure option » dans un
+  // marché tendu (18e, petit budget) sans pour autant afficher un score brut impressionnant.
+  let i = 0;
+  const totalOk = out.filter((l) => l.ok).length;
+  for (const l of out) if (l.ok) { l.rangOk = i++; l.totalOk = totalOk; }
+
   return { c, ctx, listings: out };
+}
+
+// --- Avis en clair, relatif au reste du lot retenu (pas une note abstraite) -----------------
+// rang : position parmi les annonces retenues (0 = meilleure). total : nombre d'annonces retenues.
+export function verdictScore(rang, total) {
+  if (rang == null || total == null || total <= 0) return { tier: 'bas', icone: '·', label: 'Ne correspond pas' };
+  if (total <= 1) return { tier: 'haut', icone: '♥', label: 'Lui correspond bien' };
+  if (rang === 0) return { tier: 'haut', icone: '✦', label: 'Sa meilleure option pour l’instant' };
+  const p = rang / (total - 1);
+  if (p <= 0.15) return { tier: 'haut', icone: '♥', label: 'Lui correspond très bien' };
+  if (p <= 0.45) return { tier: 'moyen', icone: '◆', label: 'Un bon compromis' };
+  if (p <= 0.75) return { tier: 'moyen', icone: '–', label: 'Passable pour elle' };
+  return { tier: 'bas', icone: '·', label: 'Assez loin de ses critères' };
 }

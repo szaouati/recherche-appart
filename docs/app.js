@@ -1,4 +1,4 @@
-import { CRITERES, mergeCriteria, rankListings } from './score.mjs';
+import { CRITERES, mergeCriteria, rankListings, verdictScore } from './score.mjs';
 
 const $ = (s, r = document) => r.querySelector(s);
 const store = {
@@ -30,8 +30,8 @@ let vuJusqua = store.get('vuJusqua', new Date(Date.now() - 864e5).toISOString())
 let onglet = 'nouveautes';
 let limite = 30;
 let ranked = [];
-let profil = store.get('profil', {});
-let config = {}; // docs/config.json : { contactEmail, alertEmail } facultatifs
+let notes = store.get('notes', {}); // id -> texte libre (son carnet, partagé avec Sacha via le journal)
+let config = {}; // docs/config.json : { botUrl, botToken }
 
 // --- Critères : formulaire <-> objet --------------------------------------
 const ETATS = ['neutre', 'pref', 'exclu'];
@@ -79,6 +79,7 @@ function dessinerArr() {
     .join('');
 }
 
+let debounceCritere = null;
 function lireFormulaire() {
   criteria.budgetMax = Number($('#budgetMax').value);
   criteria.surfaceMin = Number($('#surfaceMin').value);
@@ -96,6 +97,13 @@ function lireFormulaire() {
   sorties();
   limite = 30;
   render();
+  // On attend qu'elle arrête de bouger les curseurs avant de journaliser et de proposer un avis :
+  // sinon un simple glissement de slider enverrait des dizaines d'événements et de bulles.
+  clearTimeout(debounceCritere);
+  debounceCritere = setTimeout(() => {
+    envoyerEvenement('critere_change', { source: 'panel', criteria });
+    proposerBulleCriteres();
+  }, 4000);
 }
 
 // --- Données ---------------------------------------------------------------
@@ -156,29 +164,36 @@ function chips(l) {
 }
 
 function carte(l) {
-  const cls = l.score >= 75 ? 'haut' : l.score >= 55 ? 'moyen' : 'bas';
+  const verdict = l.ok ? verdictScore(l.rangOk, l.totalOk) : null;
   const ppm = l.price != null && l.surface ? Math.round(l.price / l.surface) : null;
   const infos = [l.surface ? `${l.surface} m²` : null, l.rooms ? `${l.rooms} p.` : null, l.arrondissement ? `Paris ${l.arrondissement}e` : null, l.floor != null ? (l.floor === 0 ? 'RDC' : `${l.floor}e ét.`) : null, ppm ? `${ppm} €/m²` : null]
     .filter(Boolean).join(' · ');
   const detail = l.ok
     ? `<ul>${l.detail.filter((d) => d.poids).map((d) => `<li><span>${esc(d.label)}</span><span>${d.points}</span><div class="bar"><i style="width:${Math.round((d.valeur ?? 0) * 100)}%"></i></div></li>`).join('')}</ul>`
     : `<ul class="rejet">${l.rejets.map((r) => `<li><span>${esc(r)}</span><span></span></li>`).join('')}</ul>`;
-  const pepite = l.ok && l.score >= 85;
-  const badge = l.ok
-    ? `<div class="score ${cls}" style="--s:${l.score}" title="Score ${l.score}/100"><span>${l.score}</span>${pepite ? '<span class="etoile" aria-hidden="true">✦</span>' : ''}</div>`
+  const pepite = l.ok && l.rangOk === 0 && l.totalOk > 1;
+  const badge = verdict
+    ? `<div class="score ${verdict.tier}" style="--s:${l.score}" title="${esc(verdict.label)} (détail : ${l.score}/100)"><span class="score-icone" aria-hidden="true">${verdict.icone}</span></div>`
     : '';
+  const note = notes[l.id] || '';
   return `<li class="card ${l.first_seen > vuJusqua && l.source !== 'Manuel' ? 'nouveau' : ''} ${pepite ? 'pepite' : ''}" data-id="${esc(l.id)}">
     <div class="photo">${l.photo ? `<img src="${esc(safeUrl(l.photo))}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</div>
     <div class="body">
       <div class="prix">${l.price != null ? eur(l.price) : '—'}<small>CC</small></div>
+      ${verdict ? `<div class="verdict verdict-${verdict.tier}">${esc(verdict.icone)} ${esc(verdict.label)}</div>` : ''}
       <div class="meta">${esc(infos)}</div>
       <div class="titre">${esc(l.title ?? l.district ?? '')}</div>
       <div class="chips">${chips(l)}</div>
-      <details class="why"><summary>${l.ok ? 'Pourquoi ce score ?' : 'Pourquoi écartée ?'}</summary>${detail}</details>
+      <details class="why"><summary>${l.ok ? 'Pourquoi cet avis ?' : 'Pourquoi écartée ?'}</summary>${detail}</details>
+      <details class="note-bloc"${note ? ' open' : ''}><summary>${note ? '🖊 Ma note' : '🖊 Ajouter une note'}</summary>
+        <textarea class="note-txt" data-id="${esc(l.id)}" placeholder="Ce que j'en pense, une question, un doute… (Sacha la voit aussi)">${esc(note)}</textarea>
+      </details>
       <div class="card-actions">
         <a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener noreferrer">Voir l'annonce ↗</a>
         <button class="mini" data-act="fav" aria-pressed="${statut[l.id] === 'fav'}">♥ Garder</button>
         <button class="mini" data-act="ecarte" aria-pressed="${statut[l.id] === 'ecarte'}">✕ Écarter</button>
+        <button class="mini mascotte-mini" data-mascotte-annonce="${esc(l.id)}" type="button" title="En discuter avec le bot">
+          <svg width="16" height="16" aria-hidden="true"><use href="#mascotte-def"></use></svg></button>
         <span class="hint">${esc(l.source)} · ${l.publishedAt ? 'publiée ' + depuis(l.publishedAt) : 'vue ' + depuis(l.first_seen)}</span>
       </div>
     </div>
@@ -200,7 +215,7 @@ function render() {
 
 function dessinerSources() {
   const pills = (meta.sources || []).map((s) => `<span class="pill ${esc(s.status)}" title="${esc(s.error ?? '')}">${esc(s.name)} · ${s.status === 'erreur' ? 'en panne' : `${s.count} annonces`}</span>`);
-  pills.push('<span class="pill todo" title="Alertes e-mail PAP / SeLoger / Leboncoin : à brancher">PAP, SeLoger, Leboncoin · via alertes e-mail (à venir)</span>');
+  pills.push('<span class="pill todo" title="Les alertes e-mail PAP / SeLoger arrivent déjà dans sa boîte dédiée ; leur lecture automatique par le bot reste à brancher">PAP, SeLoger, Leboncoin · alertes reçues, pas encore lues par le bot</span>');
   $('#sources').innerHTML = pills.join('');
 }
 
@@ -214,7 +229,7 @@ function statutRecherche() {
     `Recherche : ${zone} · ≤ ${eur(c.budgetMax)} · ${c.surfaceMin} m²+`,
     `${ok.length} annonce${ok.length > 1 ? 's' : ''} correspond${ok.length > 1 ? 'ent' : ''} en ce moment`,
     nouvelles ? `${nouvelles} nouvelle${nouvelles > 1 ? 's' : ''} depuis ta dernière visite` : 'rien de nouveau depuis ta dernière visite',
-    meilleure ? `meilleure trouvaille : ${meilleure.score}/100 à ${eur(meilleure.price)}` : null,
+    meilleure ? `${verdictScore(meilleure.rangOk, meilleure.totalOk).label} à ${eur(meilleure.price)}` : null,
   ].filter(Boolean);
   return bits.join(' · ');
 }
@@ -276,13 +291,32 @@ function brancher() {
     if (b) { onglet = b.dataset.tab; limite = 30; render(); }
   });
   $('#liste').addEventListener('click', (e) => {
+    const badge = e.target.closest('[data-mascotte-annonce]');
+    if (badge) {
+      const l = ranked.find((x) => x.id === badge.dataset.mascotteAnnonce);
+      if (l) ouvrirBot(`À propos de cette annonce (${l.title ?? ''} · ${l.price != null ? eur(l.price) : '?'} · ${l.url}) : `);
+      return;
+    }
     const b = e.target.closest('[data-act]');
     if (!b) return;
     const id = b.closest('.card').dataset.id;
-    statut[id] = statut[id] === b.dataset.act ? undefined : b.dataset.act;
+    const actif = statut[id] !== b.dataset.act;
+    statut[id] = actif ? b.dataset.act : undefined;
     if (!statut[id]) delete statut[id];
     store.set('statut', statut);
+    const l = ranked.find((x) => x.id === id) || manuel.find((x) => x.id === id);
+    if (actif) envoyerEvenement(b.dataset.act, { listingId: id, url: l?.url, title: l?.title, price: l?.price });
     render();
+  });
+  $('#liste').addEventListener('focusout', (e) => {
+    const ta = e.target.closest('.note-txt');
+    if (!ta) return;
+    const id = ta.dataset.id;
+    const val = ta.value.trim();
+    if (val) notes[id] = val; else delete notes[id];
+    store.set('notes', notes);
+    const l = ranked.find((x) => x.id === id) || manuel.find((x) => x.id === id);
+    envoyerEvenement('note', { listingId: id, url: l?.url, title: l?.title, note: val });
   });
   $('#btn-more').addEventListener('click', () => { limite += 30; render(); });
   $('#btn-vu').addEventListener('click', () => { vuJusqua = new Date().toISOString(); store.set('vuJusqua', vuJusqua); render(); });
@@ -294,13 +328,15 @@ function brancher() {
     const f = new FormData(e.target);
     const num = (k) => (f.get(k) === '' || f.get(k) == null ? null : Number(f.get(k)));
     const now = new Date().toISOString();
-    manuel.unshift({
+    const l = {
       id: `manuel:${Date.now()}`, source: 'Manuel', url: f.get('url'), title: f.get('title') || null,
       price: num('price'), surface: num('surface'), rooms: num('rooms'), arrondissement: num('arrondissement'), floor: num('floor'),
       elevator: f.get('elevator') ? true : null, dpe: f.get('dpe') || null, furnished: null,
       features: f.get('balcon') ? { balcon: true } : {}, first_seen: now, last_seen: now, publishedAt: now, photo: null,
-    });
+    };
+    manuel.unshift(l);
     store.set('manuel', manuel);
+    envoyerEvenement('ajout_manuel', { url: l.url, title: l.title, price: l.price });
     e.target.reset();
     render();
   });
@@ -319,114 +355,20 @@ function brancher() {
 }
 
 
-// --- Ma recherche en détail : questionnaire, récapitulatif à envoyer, alertes e-mail ---
-const CHAMPS_PROFIL = [
-  ['redhibitoires', 'Ce que je ne veux absolument pas', 'textarea', 'Ex. : rez-de-chaussée sur cour, 5e étage sans ascenseur, cuisine ouverte…'],
-  ['quartiers', 'Quartiers ou rues que j\'aime / que j\'évite, et pourquoi', 'textarea', ''],
-  ['trajet', 'Mon trajet quotidien (lieu de travail ou d\'études, durée maximale)', 'text', ''],
-  ['emmenagement', 'Date d\'emménagement souhaitée et durée prévue', 'text', ''],
-  ['occupants', 'Nombre d\'occupants', 'text', ''],
-  ['animaux', 'Animaux', 'text', ''],
-  ['garant', 'Dossier : garant, Visale, revenus (facultatif)', 'text', ''],
-  ['budgetPerle', 'Budget maximal exceptionnel pour un vrai coup de cœur (€)', 'number', ''],
-  ['remarques', 'Autre chose à savoir', 'textarea', ''],
-];
-
-function recapTexte() {
-  const c = criteria;
-  const nom = Object.fromEntries(CRITERES);
-  const pref = c.arrondissementsPref;
-  const exclus = c.arrondissements.length ? Array.from({ length: 20 }, (_, i) => i + 1).filter((i) => !c.arrondissements.includes(i)) : [];
-  const niveau = (min, max) => CRITERES.filter(([k]) => c.poids[k] >= min && c.poids[k] <= max).map(([k]) => `${nom[k]} (${c.poids[k]}/5)`);
-  const ligne = (t, v) => (v && String(v).trim() ? `- ${t} : ${String(v).trim()}` : null);
-  const perle = profil.budgetPerle ? ` (jusqu'à ${eur(profil.budgetPerle)} pour un coup de cœur)` : '';
-  const l = [
-    "MA RECHERCHE D'APPART À PARIS",
-    '',
-    'CRITÈRES CHIFFRÉS',
-    `- Budget max : ${eur(c.budgetMax)} charges comprises${perle}`,
-    `- Surface min : ${c.surfaceMin} m² · ${c.piecesMin} pièce(s) min · meublé : ${{ indifferent: 'peu importe', oui: 'oui', non: 'non' }[c.meuble]}`,
-    `- Arrondissements préférés : ${pref.length ? pref.map((i) => `${i}e`).join(', ') : 'aucun en particulier'}`,
-    `- Arrondissements exclus : ${exclus.length ? exclus.map((i) => `${i}e`).join(', ') : 'aucun'}`,
-    `- Écartées automatiquement : ${[c.exclure.rdc && 'rez-de-chaussée', c.exclure.dpeFG && 'DPE F/G', c.exclure.coloc && 'colocation'].filter(Boolean).join(', ') || 'rien'}`,
-    `- Essentiel (4-5) : ${niveau(4, 5).join(', ') || '—'}`,
-    `- Important (2-3) : ${niveau(2, 3).join(', ') || '—'}`,
-    `- Bonus (1) : ${niveau(1, 1).join(', ') || '—'}`,
-    `- Indifférent (0) : ${niveau(0, 0).join(', ') || '—'}`,
-    `- Alerte Telegram : ${c.alerteActive ? `oui, à partir de ${c.alerteScoreMin}/100` : 'non'}`,
-    '',
-    'EN CLAIR',
-    ...CHAMPS_PROFIL.filter(([k]) => k !== 'budgetPerle').map(([k, label]) => ligne(label, profil[k])).filter(Boolean),
-  ];
-  if (l.at(-1) === 'EN CLAIR') l.push('(rien de renseigné)');
-  l.push('', '--- pour le bot (docs/criteria.json) ---', JSON.stringify(c));
-  return l.join('\n');
-}
-
-function dessinerProfil() {
-  $('#profil-champs').innerHTML = CHAMPS_PROFIL.map(([k, label, type, ph]) => {
-    const v = esc(profil[k] ?? '');
-    const champ = type === 'textarea' ? `<textarea rows="3" data-profil="${k}" placeholder="${esc(ph)}">${v}</textarea>` : `<input type="${type}" data-profil="${k}" value="${v}" placeholder="${esc(ph)}">`;
-    return `<label>${esc(label)}${champ}</label>`;
-  }).join('');
-  majRecap();
-}
-
-function majRecap() {
-  const texte = recapTexte();
-  $('#recap').value = texte;
-  const mail = $('#btn-mail');
-  if (config.contactEmail) {
-    mail.hidden = false;
-    // Le corps d'un mailto: est limité en taille : on n'y met que la partie lisible, sans le JSON.
-    mail.href = `mailto:${encodeURIComponent(config.contactEmail)}?subject=${encodeURIComponent("Ma recherche d'appart")}&body=${encodeURIComponent(texte.split('\n--- pour le bot')[0])}`;
-  }
-  dessinerAlertes();
-}
-
-function dessinerAlertes() {
-  const c = criteria;
-  const adresse = config.alertEmail ? `<strong>${esc(config.alertEmail)}</strong>` : "l'adresse dédiée que Sacha t'a donnée";
-  const zone = `Paris · ≤ ${eur(c.budgetMax)} · ≥ ${c.surfaceMin} m² · ${c.piecesMin} pièce(s) et plus`;
-  const pap = `https://www.pap.fr/annonce/location-appartement-paris-75-g439-jusqu-a-${c.budgetMax}-euros-a-partir-de-${c.surfaceMin}-m2-a-partir-de-${c.piecesMin}-pieces`;
-  const etapes = (liste) => `<ol>${liste.map((e) => `<li>${e}</li>`).join('')}</ol>`;
-  $('#alertes').innerHTML = `
-    <p class="hint">Sur chaque site, crée une alerte avec ${adresse}. Ne mets que l'indispensable : ${zone}. Ce site fait ensuite le tri fin avec tes préférences, donc mieux vaut une alerte un peu large.</p>
-    <div class="site-card"><h4>PAP <span class="hint">(particuliers, sans frais d'agence)</span></h4>
-      ${etapes(['Ouvre la recherche déjà préfiltrée ci-dessous.', 'Clique sur « Créer une alerte e-mail » et saisis l\'adresse dédiée.'])}
-      <a class="btn" href="${esc(pap)}" target="_blank" rel="noopener noreferrer">Ouvrir la recherche PAP ↗</a></div>
-    <div class="site-card"><h4>SeLoger</h4>
-      ${etapes(['Ouvre SeLoger, choisis Louer → Appartement → Paris.', `Règle le budget max (${eur(c.budgetMax)}), la surface min (${c.surfaceMin} m²) et les pièces.`, 'Clique sur « Créer une alerte » (compte gratuit).'])}
-      <a class="btn" href="https://www.seloger.com/" target="_blank" rel="noopener noreferrer">Ouvrir SeLoger ↗</a></div>
-    <div class="site-card"><h4>Leboncoin</h4>
-      ${etapes(['Ouvre Leboncoin → Locations → Paris.', `Règle le prix max (${eur(c.budgetMax)}), la surface min (${c.surfaceMin} m²) et les pièces.`, 'Clique sur « Sauvegarder la recherche » et active l\'alerte e-mail.'])}
-      <a class="btn" href="https://www.leboncoin.fr/" target="_blank" rel="noopener noreferrer">Ouvrir Leboncoin ↗</a></div>`;
-}
-
-async function copierRecap() {
-  const texte = $('#recap').value;
-  try { await navigator.clipboard.writeText(texte); }
-  catch { $('#recap').select(); document.execCommand('copy'); }
-  $('#recap-etat').textContent = 'Copié. Colle-le dans un message à Sacha.';
-}
-
-function brancherProfil() {
-  $('#btn-profil').addEventListener('click', () => { dessinerProfil(); $('#dlg-profil').showModal(); });
-  $('#profil-close').addEventListener('click', () => $('#dlg-profil').close());
-  $('#profil-champs').addEventListener('input', (e) => {
-    const k = e.target.dataset.profil;
-    if (!k) return;
-    profil[k] = e.target.value;
-    store.set('profil', profil);
-    majRecap();
-  });
-  $('#btn-copy').addEventListener('click', copierRecap);
-  if (navigator.share) {
-    $('#btn-share').hidden = false;
-    $('#btn-share').addEventListener('click', async () => {
-      try { await navigator.share({ title: "Ma recherche d'appart", text: $('#recap').value }); $('#recap-etat').textContent = 'Envoyé.'; }
-      catch (e) { if (e.name !== 'AbortError') copierRecap(); }
+// --- Journal partagé : tout ce qu'elle fait d'important part vers Sacha, en silence -----------
+// Remplace l'ancien « Ma recherche en détail » (formulaire + envoi manuel) : elle ne parle plus
+// qu'au bot, et chaque signal utile (favori, écarté, note, changement de critères) est journalisé
+// côté serveur pour que Sacha puisse suivre où elle en est sans qu'elle ait à lui envoyer quoi que ce soit.
+async function envoyerEvenement(type, payload) {
+  if (!config.botUrl || !config.botToken) return;
+  try {
+    await fetch(config.botUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-App-Token': config.botToken },
+      body: JSON.stringify({ kind: 'event', type, payload, criteria }),
     });
+  } catch {
+    // best-effort : un journal qui rate une fois ne doit jamais gêner son usage du site
   }
 }
 
@@ -476,6 +418,7 @@ function afficherProposition(p) {
     limite = 30;
     render();
     box.hidden = true;
+    envoyerEvenement('critere_change', { source: 'bot', diff, criteria });
     const r2 = reglages();
     if (r2.repo && r2.token) {
       $('#bot-etat').textContent = 'Appliqué sur le site. Envoi au bot…';
@@ -514,8 +457,18 @@ async function envoyerBot(message) {
   }
 }
 
+function ouvrirBot(prefill) {
+  cacherBulle();
+  dessinerBotLog();
+  $('#dlg-bot').showModal();
+  const ta = $('#bot-input');
+  if (prefill) ta.value = prefill;
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+}
+
 function brancherBot() {
-  $('#btn-bot').addEventListener('click', () => { dessinerBotLog(); $('#dlg-bot').showModal(); $('#bot-input').focus(); });
+  $('#btn-bot').addEventListener('click', () => ouvrirBot());
   $('#bot-close').addEventListener('click', () => $('#dlg-bot').close());
   $('#bot-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -528,6 +481,49 @@ function brancherBot() {
   });
 }
 
+// --- La mascotte : présence discrète qui invite à tout modifier, et récolte ses avis ----------
+// Un petit animal (inspiré de l'univers de Chocola & Vanilla, dessiné pour ce site — pas le
+// personnage du manga) flotte en bas de l'écran. Il ouvre le même chat que « Demander à Claude » ;
+// il sert surtout à montrer, dans l'appli, que tout est modifiable, et à glisser de temps en temps
+// une question courte (👍/👎) qui part directement dans le journal partagé avec Sacha.
+function montrerBulle(texte, boutons) {
+  const bulle = $('#mascotte-bulle');
+  bulle.innerHTML = `<p>${esc(texte)}</p><div class="mascotte-bulle-actions"></div>`;
+  const zone = bulle.querySelector('.mascotte-bulle-actions');
+  for (const b of boutons) {
+    const btn = document.createElement('button');
+    btn.className = 'btn small' + (b.primaire ? ' primary' : ' ghost');
+    btn.textContent = b.texte;
+    btn.addEventListener('click', () => { cacherBulle(); b.action?.(); });
+    zone.appendChild(btn);
+  }
+  bulle.hidden = false;
+}
+function cacherBulle() { $('#mascotte-bulle').hidden = true; }
+
+function proposerBulleCriteres() {
+  if (store.get('bulleCriteresVue', false)) return; // une seule fois par appareil, pas à chaque réglage
+  store.set('bulleCriteresVue', true);
+  montrerBulle('Ces nouveaux critères, ça te va ?', [
+    { texte: '👍 Oui', primaire: true, action: () => envoyerEvenement('avis', { sujet: 'criteres', avis: 'positif', criteria }) },
+    { texte: '👎 Pas trop', action: () => envoyerEvenement('avis', { sujet: 'criteres', avis: 'negatif', criteria }) },
+    { texte: 'Dis-m\'en plus', action: () => ouvrirBot('') },
+  ]);
+}
+
+function brancherMascotte() {
+  $('#mascotte-flottante').addEventListener('click', () => ouvrirBot());
+  $('#criteres-mascotte').addEventListener('click', (e) => { e.preventDefault(); ouvrirBot('Sur mes critères, je voudrais '); });
+  // Premher contact : une seule fois, on se présente et on explique la transparence avec Sacha.
+  if (!store.get('bulleAccueilVue', false)) {
+    store.set('bulleAccueilVue', true);
+    setTimeout(() => montrerBulle(
+      "Coucou, c'est moi ! Tu peux tout me demander pour ajuster tes critères. Ce qu'on se dit ici, et tes ♥/✕/notes, Sacha les voit aussi pour adapter le site pour toi.",
+      [{ texte: 'Compris, on discute', primaire: true, action: () => ouvrirBot() }, { texte: 'Plus tard', action: () => {} }],
+    ), 1200);
+  }
+}
+
 async function demarrer() {
   // Large écran : panneau toujours ouvert (son titre est masqué). Mobile : replié pour laisser place aux annonces.
   const large = matchMedia('(min-width: 900px)');
@@ -536,8 +532,8 @@ async function demarrer() {
   large.addEventListener('change', ajuster);
   remplirFormulaire();
   brancher();
-  brancherProfil();
   brancherBot();
+  brancherMascotte();
   fetch('config.json').then((r) => (r.ok ? r.json() : {})).then((c) => { config = c || {}; }).catch(() => {});
   try {
     const [d, c] = await Promise.all([
