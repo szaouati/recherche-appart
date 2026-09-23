@@ -3,6 +3,25 @@
   "notes": {},
   "manuel": [
     {
+      "id": "manuel:1790178239809",
+      "source": "Manuel",
+      "url": "https://www.leboncoin.fr/recherche?category=10&locations=Paris_75018__48.89247_2.34464_2141&price=0-900&square=10-max&real_estate_type=2",
+      "title": "Leboncoin (recherche) — 780€, 19m², 1p — Chapelle-Marx Dormoy",
+      "price": 780,
+      "surface": 19,
+      "rooms": 1,
+      "arrondissement": 18,
+      "floor": 3,
+      "elevator": null,
+      "dpe": "D",
+      "furnished": null,
+      "features": {},
+      "first_seen": "2026-09-23T15:43:59.809Z",
+      "last_seen": "2026-09-23T15:43:59.809Z",
+      "publishedAt": "2026-09-23T15:43:59.809Z",
+      "photo": null
+    },
+    {
       "id": "manuel:1790178237212",
       "source": "Manuel",
       "url": "https://www.leboncoin.fr/recherche?category=10&locations=Paris_75018__48.89247_2.34464_2141&price=0-900&square=10-max&real_estate_type=2",
@@ -232,5 +251,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-23T15:43:58.410Z"
+  "updatedAt": "2026-09-23T15:44:01.232Z"
 }
