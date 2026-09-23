@@ -156,6 +156,44 @@
         "alerteActive": true,
         "alerteScoreMin": 55
       }
+    },
+    {
+      "ts": "2026-09-23T09:10:52.481Z",
+      "kind": "chat",
+      "message": "Quatrieme test json tail",
+      "reply": "Je ne comprends pas bien ta demande ! 😊 \n\nJe suis là pour t'aider à affiner tes critères de recherche d'appartement à Paris (budget, surface, arrondissements, ce qui compte pour toi...). Y a-t-il quelque chose que tu aimerais changer dans ta recherche ?",
+      "proposal": null,
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 30,
+        "piecesMin": 2,
+        "arrondissements": [],
+        "arrondissementsPref": [],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 55
+      }
     }
   ]
 }
