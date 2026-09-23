@@ -142,19 +142,25 @@ async function appendJournal(env, entry) {
 const TYPES_EVENEMENT = ['fav', 'ecarte', 'note', 'critere_change', 'ajout_manuel', 'avis'];
 
 // --- État partagé (favoris/écartés/notes/annonces manuelles) -----------------------------------
-const ETAT_VIDE = { statut: {}, notes: {}, manuel: [], vuJusqua: null };
+// Un Worker Cloudflare réutilise le même module (donc les mêmes objets au niveau module) entre
+// plusieurs requêtes successives dans un isolate. `etatVide()` doit donc renvoyer un objet NEUF à
+// chaque appel — jamais une constante partagée — sinon deux requêtes qui tombent toutes les deux sur
+// « docs/data/etat.json » introuvable (ou illisible) se retrouveraient à muter le MÊME objet en
+// mémoire, et donc à mélanger leurs données. `etatPropre` fait pareil par précaution : elle ne
+// renvoie jamais telles quelles les sous-structures de `data`, toujours des copies fraîches.
+const etatVide = () => ({ statut: {}, notes: {}, manuel: [], vuJusqua: null });
 
 function etatPropre(data) {
   return {
-    statut: data?.statut && typeof data.statut === 'object' ? data.statut : {},
-    notes: data?.notes && typeof data.notes === 'object' ? data.notes : {},
-    manuel: Array.isArray(data?.manuel) ? data.manuel : [],
+    statut: data?.statut && typeof data.statut === 'object' ? { ...data.statut } : {},
+    notes: data?.notes && typeof data.notes === 'object' ? { ...data.notes } : {},
+    manuel: Array.isArray(data?.manuel) ? [...data.manuel] : [],
     vuJusqua: typeof data?.vuJusqua === 'string' ? data.vuJusqua : null,
   };
 }
 
 async function lireEtat(env) {
-  const { data } = await lireJSON(env, env.ETAT_PATH || 'docs/data/etat.json', ETAT_VIDE);
+  const { data } = await lireJSON(env, env.ETAT_PATH || 'docs/data/etat.json', etatVide());
   return etatPropre(data);
 }
 
@@ -163,13 +169,13 @@ async function lireEtat(env) {
 // reçoit, jamais d'une valeur capturée avant coup, pour que ce réessai soit correct.
 async function ecrireEtatMute(env, muter) {
   const path = env.ETAT_PATH || 'docs/data/etat.json';
-  let { sha, data } = await lireJSON(env, path, ETAT_VIDE);
+  let { sha, data } = await lireJSON(env, path, etatVide());
   data = etatPropre(data);
   muter(data);
   data.updatedAt = new Date().toISOString();
   let res = await ecrireJSON(env, path, data, sha, 'État partagé : mise à jour');
   if (res.status === 409) {
-    const retry = await lireJSON(env, path, ETAT_VIDE);
+    const retry = await lireJSON(env, path, etatVide());
     data = etatPropre(retry.data);
     muter(data);
     data.updatedAt = new Date().toISOString();
@@ -306,6 +312,24 @@ export default {
           etat = await ecrireEtatMute(env, (e) => { e.manuel.unshift(listing); e.manuel = e.manuel.slice(0, 200); });
           journalType = 'ajout_manuel';
           journalPayload = { url: listing.url, title: listing.title, price: listing.price };
+        } else if (body.action === 'modifier_manuel') {
+          // Corrige un champ d'une annonce déjà ajoutée à la main (typiquement son url, quand on a
+          // pu récupérer le vrai lien après coup — ex. Leboncoin, dont le captcha empêche de le
+          // retrouver automatiquement au moment de l'ajout).
+          if (!id) return json({ error: 'id manquant' }, 400, headers);
+          const patch = body.patch && typeof body.patch === 'object' ? body.patch : {};
+          const champsAutorises = ['url', 'title', 'price', 'surface', 'rooms', 'floor', 'dpe'];
+          let trouve = false;
+          etat = await ecrireEtatMute(env, (e) => {
+            const l = e.manuel.find((x) => x.id === id);
+            if (!l) return;
+            trouve = true;
+            if (typeof patch.url === 'string') l.url = patch.url.slice(0, 500);
+            if (typeof patch.title === 'string') l.title = patch.title.slice(0, 200);
+            for (const k of ['price', 'surface', 'rooms', 'floor']) if (patch[k] != null && Number.isFinite(Number(patch[k]))) l[k] = Number(patch[k]);
+            if (typeof patch.dpe === 'string' && /^[A-G]$/.test(patch.dpe)) l.dpe = patch.dpe;
+          });
+          if (!trouve) return json({ error: 'Annonce manuelle introuvable' }, 404, headers);
         } else {
           return json({ error: 'Action inconnue' }, 400, headers);
         }

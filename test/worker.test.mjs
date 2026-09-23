@@ -42,7 +42,11 @@ function creerEnvDeTest() {
     ETAT_PATH: 'docs/data/etat.json',
     RATE_LIMITER: { limit: async () => ({ success: true }) },
   };
-  const ctx = { waitUntil: (p) => p };
+  // Le Worker ne fait pas attendre sa réponse par les écritures de journal en tâche de fond
+  // (ctx.waitUntil) : ici on les capture et on les attend nous-mêmes avant de rendre la main, pour
+  // qu'un test ne « fuite » jamais une écriture en cours dans globalThis.fetch du test suivant.
+  const enCours = [];
+  const ctx = { waitUntil: (p) => { enCours.push(p); } };
   const HEADERS = { Origin: 'https://example.test', 'X-App-Token': 'tok123', 'Content-Type': 'application/json' };
 
   return {
@@ -51,6 +55,7 @@ function creerEnvDeTest() {
     async post(body) {
       const req = new Request('https://worker.test/', { method: 'POST', headers: HEADERS, body: JSON.stringify(body) });
       const res = await worker.fetch(req, env, ctx);
+      await Promise.all(enCours.splice(0));
       return { status: res.status, body: await res.json() };
     },
     async get(path) {
@@ -96,6 +101,23 @@ test('set_vu : monotone, ne recule jamais', async () => {
   await env.post({ kind: 'etat', action: 'set_vu', ts: '2026-09-23T12:00:00.000Z' });
   const r = await env.post({ kind: 'etat', action: 'set_vu', ts: '2026-09-23T10:00:00.000Z' });
   assert.equal(r.body.vuJusqua, '2026-09-23T12:00:00.000Z');
+});
+
+test('modifier_manuel : corrige un champ (ex. url) d\'une annonce déjà ajoutée, sans toucher aux autres', async () => {
+  const env = creerEnvDeTest();
+  env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });
+  const ajout = await env.post({ kind: 'etat', action: 'ajouter_manuel', listing: { url: 'https://leboncoin.fr/recherche?x', title: 'T', price: 800 }, criteria: {} });
+  const id = ajout.body.manuel[0].id;
+  const r = await env.post({ kind: 'etat', action: 'modifier_manuel', id, patch: { url: 'https://leboncoin.fr/ad/locations/1234567.htm' } });
+  assert.equal(r.body.manuel[0].url, 'https://leboncoin.fr/ad/locations/1234567.htm');
+  assert.equal(r.body.manuel[0].price, 800, 'les autres champs restent inchangés');
+});
+
+test('modifier_manuel : id inconnu → 404, n\'écrit rien', async () => {
+  const env = creerEnvDeTest();
+  env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });
+  const r = await env.post({ kind: 'etat', action: 'modifier_manuel', id: 'manuel:inexistant', patch: { url: 'https://x' } });
+  assert.equal(r.status, 404);
 });
 
 test('ajouter_manuel : id/horodatages régénérés côté serveur, jamais ceux du navigateur', async () => {
