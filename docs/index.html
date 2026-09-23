@@ -147,6 +147,9 @@
   </button>
   <div id="mascotte-bulle" class="mascotte-bulle" hidden role="status"></div>
 
-  <script type="module" src="app.js"></script>
+  <!-- ?v= à changer à chaque modification de app.js : GitHub Pages le met en cache 10 min (max-age),
+       et certains navigateurs (Safari surtout) le gardent bien plus longtemps sans revalider tant
+       que l'URL ne change pas. Sans ça, un appareil peut rester bloqué sur une vieille version. -->
+  <script type="module" src="app.js?v=20260923c"></script>
 </body>
 </html>

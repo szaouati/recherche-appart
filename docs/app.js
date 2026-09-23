@@ -655,6 +655,12 @@ async function demarrer() {
   // régulièrement pendant que l'onglet est visible, et tout de suite en y revenant.
   setInterval(() => { if (document.visibilityState === 'visible') synchroniserEtat({ silencieux: true }); }, 25_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') synchroniserEtat({ silencieux: true }); });
+  // Safari (iPhone et Mac) restaure très souvent un onglet déjà ouvert depuis son cache mémoire
+  // (bfcache) en revenant dessus, sans la moindre requête réseau : ni le rechargement des données,
+  // ni même « visibilitychange » ne se déclenchent alors de façon fiable. « pageshow » avec
+  // persisted=true est le seul signal fiable de ce cas précis (retour sur l'appli après être allé
+  // ailleurs) : on force une resynchronisation immédiate.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) synchroniserEtat({ silencieux: true }); });
 }
 
 demarrer();
