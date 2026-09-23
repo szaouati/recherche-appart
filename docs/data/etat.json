@@ -3,6 +3,25 @@
   "notes": {},
   "manuel": [
     {
+      "id": "manuel:1790178435018",
+      "source": "Manuel",
+      "url": "https://www.seloger.com/classified-search?distributionTypes=Rent&estateTypes=Apartment&locations=POCOFR4812&priceMax=900",
+      "title": "SeLoger (recherche) — 800€, 22m², 1p — Clignancourt-Jules Joffrin (GO HOME, exclusivité)",
+      "price": 800,
+      "surface": 22,
+      "rooms": 1,
+      "arrondissement": 18,
+      "floor": 3,
+      "elevator": null,
+      "dpe": "D",
+      "furnished": null,
+      "features": {},
+      "first_seen": "2026-09-23T15:47:15.018Z",
+      "last_seen": "2026-09-23T15:47:15.018Z",
+      "publishedAt": "2026-09-23T15:47:15.018Z",
+      "photo": null
+    },
+    {
       "id": "manuel:1790178431865",
       "source": "Manuel",
       "url": "https://www.seloger.com/classified-search?distributionTypes=Rent&estateTypes=Apartment&locations=POCOFR4812&priceMax=900",
@@ -500,5 +519,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-23T15:47:13.367Z"
+  "updatedAt": "2026-09-23T15:47:16.496Z"
 }
