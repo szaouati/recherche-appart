@@ -187,3 +187,31 @@ Accès à la boîte : le connecteur Gmail d'une session Claude Code peut être r
 `alertes.appart.tabatha@gmail.com` (confirmé le 23/09/2026) — à revérifier si beaucoup de temps a passé avant de lire
 quoi que ce soit. Sinon, IMAP classique avec les secrets `IMAP_USER` / `IMAP_APP_PASSWORD` (déjà enregistrés le
 22/09/2026). Voir `CLAUDE.md` § pipeline e-mail pour la suite.
+
+### Format SeLoger, décodé le 23/09/2026 sur de vrais e-mails (`samples/seloger-*.txt`, gitignorés)
+
+Trois échantillons réels sauvegardés : `seloger-1-annonce.txt`, `seloger-2-annonces.txt` (plusieurs biens dans un même
+e-mail), `seloger-exclusif.txt` (format « annonce exclusive » d'une agence partenaire, structure légèrement différente).
+Aucun e-mail PAP avec une vraie annonce n'est encore arrivé (seulement les e-mails de création de compte/alerte) —
+budget/zone très restreints (18e, ≤ 900 €), normal que ça prenne plus de temps.
+
+- **Repère fiable** : chaque bien se termine par un lien `https://click.by.seloger.com/?qs=...` suivi du texte
+  **« Voir l'annonce »**. C'est CE lien-là (pas les autres liens de tracking du bloc — « Localisation différente »,
+  « Gérer mes alertes »…) qui pointe vers l'annonce. Découper le texte en blocs sur ce repère.
+- **Résolution de l'URL** : `https://click.by.seloger.com/?qs=…` est un redirecteur 302, résolu en **un seul saut**
+  (testé par `curl -D - --max-redirs 0`) vers une URL stable du type
+  `https://www.seloger.com/annonce/location/ile-de-france/paris-75/paris-75000/<ID>?utm_...`. Garder `<ID>`
+  (ex. `26BVYT451S9C`) comme identifiant unique (`seloger:<ID>`), et l'URL nettoyée des `utm_*` comme lien affiché.
+  La page de l'annonce elle-même répond 403 en accès direct (anti-bot, comme Bien'ici) : inutile d'aller plus loin
+  que le premier saut, on n'a pas besoin de charger la page.
+- **⚠️ Incohérence constatée sur une vraie donnée** : un e-mail affichait le texte « Paris 17ème arrondissement » avec
+  le code postal `(75015)` entre parenthèses juste en dessous — les deux se contredisent. **Toujours dériver
+  l'arrondissement du code postal à 5 chiffres**, jamais du texte ordinal (même logique que
+  `collector/sources/bienici.mjs::arrondissement()`), le code postal semblant être la donnée la plus fiable des deux.
+- **Prix** : ligne `NNN €/mois charges comprises` juste après le lien « Localisation différente » du bloc.
+- **Surface/pièces** : ligne `N pièce(s) . NN[,N] m²`.
+- **Titre** : parfois tronqué par SeLoger lui-même avec `...` (ex. « Studio meublé de 19m² - rue de Rome 75017 - La Fon... »)
+  — normal, ne pas essayer de le compléter.
+- SeLoger élargit spontanément la zone quand peu de résultats correspondent exactement (« Nous avons élargi vos critères
+  de recherches ») : des arrondissements hors zone apparaissent dans l'e-mail. Sans conséquence : le filtre strict sur
+  `criteria.arrondissements` (déjà dans `docs/score.mjs`) les écartera comme pour toute autre source.
