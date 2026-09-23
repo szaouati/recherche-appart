@@ -31,5 +31,5 @@
     "parquet": 1
   },
   "alerteActive": true,
-  "alerteScoreMin": 52
+  "alerteScoreMin": 66
 }
