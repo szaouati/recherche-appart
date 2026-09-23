@@ -119,7 +119,7 @@
     {
       "id": "manuel:1790178264354",
       "source": "Manuel",
-      "url": "https://www.leboncoin.fr/recherche?category=10&locations=Paris_75018__48.89247_2.34464_2141&price=0-900&square=10-max&real_estate_type=2",
+      "url": "https://www.leboncoin.fr/ad/locations/3272578697",
       "title": "Leboncoin (recherche) — 799€, 15m², 1p — Chapelle-Marx Dormoy",
       "price": 799,
       "surface": 15,
@@ -538,5 +538,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-23T16:14:40.999Z"
+  "updatedAt": "2026-09-23T16:14:42.726Z"
 }
