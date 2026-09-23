@@ -3,6 +3,25 @@
   "notes": {},
   "manuel": [
     {
+      "id": "manuel:1790178245949",
+      "source": "Manuel",
+      "url": "https://www.leboncoin.fr/recherche?category=10&locations=Paris_75018__48.89247_2.34464_2141&price=0-900&square=10-max&real_estate_type=2",
+      "title": "Leboncoin (recherche) — 770€, 19m², 1p — Simplon-Poissonniers",
+      "price": 770,
+      "surface": 19,
+      "rooms": 1,
+      "arrondissement": 18,
+      "floor": 2,
+      "elevator": null,
+      "dpe": null,
+      "furnished": null,
+      "features": {},
+      "first_seen": "2026-09-23T15:44:05.949Z",
+      "last_seen": "2026-09-23T15:44:05.949Z",
+      "publishedAt": "2026-09-23T15:44:05.949Z",
+      "photo": null
+    },
+    {
       "id": "manuel:1790178242904",
       "source": "Manuel",
       "url": "https://www.leboncoin.fr/recherche?category=10&locations=Paris_75018__48.89247_2.34464_2141&price=0-900&square=10-max&real_estate_type=2",
@@ -270,5 +289,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-23T15:44:04.222Z"
+  "updatedAt": "2026-09-23T15:44:07.298Z"
 }
