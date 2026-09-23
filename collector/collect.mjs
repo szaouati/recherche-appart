@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mergeCriteria, rankListings } from '../docs/score.mjs';
-import { fetchBienici } from './sources/bienici.mjs';
+import { fetchBienici, verifierDisponibilite } from './sources/bienici.mjs';
 import { fetchEmail } from './sources/email.mjs';
 import { formatAlert, sendTelegram, telegramConfigured } from './notify.mjs';
 
@@ -22,6 +22,9 @@ const QUICK = args.includes('--quick');
 const RETENTION_JOURS = 21;
 const MAX_ALERTES = 8;
 const FRAICHEUR_ALERTE_JOURS = 3; // pas d'alerte pour une annonce publiée il y a plus longtemps
+const MAX_VERIF_DISPONIBILITE = 25; // annonces Bien'ici les mieux classées vérifiées par collecte complète
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Ajouter une source = ajouter une ligne ici (fonction async (criteria) => listings normalisés).
 // Chaque source renvoie { items, warnings }.
@@ -99,6 +102,31 @@ async function main() {
   }
   const limite = now.getTime() - RETENTION_JOURS * 864e5;
   marquerDoublons(known);
+
+  // Vérification ciblée de disponibilité : le champ que renvoie l'API de RECHERCHE de Bien'ici est
+  // inutilisable (toujours à false), et une annonce retirée par l'agence peut rester dans les
+  // résultats de recherche plusieurs semaines (leur index tarde à se synchroniser). Seule l'API de
+  // fiche individuelle est fiable — trop coûteuse pour tout vérifier, donc seulement ce qu'elle
+  // verrait vraiment : les mieux classées de cette collecte complète.
+  if (mode === 'full') {
+    const candidats = rankListings([...known.values()].filter((l) => !l.dupOf), criteria)
+      .listings.filter((l) => l.ok && l.source === "Bien'ici")
+      .slice(0, MAX_VERIF_DISPONIBILITE);
+    let retirees = 0;
+    for (const l of candidats) {
+      try {
+        const disponible = await verifierDisponibilite(l.id.replace("bienici:", ''));
+        const entree = known.get(l.id);
+        if (disponible === false) { entree.retire = true; retirees++; }
+        else delete entree.retire;
+      } catch (e) {
+        console.error(`  ✗ Vérification disponibilité ${l.id} : ${e.message}`);
+      }
+      await sleep(200);
+    }
+    if (retirees) console.log(`  ${retirees} annonce(s) Bien'ici retirée(s) du marché (fiche indisponible), exclue(s).`);
+  }
+
   const listings = [...known.values()].filter((l) => new Date(l.last_seen).getTime() > limite);
 
   const out = {
@@ -112,7 +140,7 @@ async function main() {
     const { listings: ranked } = rankListings(listings, criteria);
     const seuilDate = now.getTime() - FRAICHEUR_ALERTE_JOURS * 864e5;
     const aAlerter = ranked
-      .filter((l) => !l.notified && !l.dupOf && l.ok && l.score >= criteria.alerteScoreMin)
+      .filter((l) => !l.notified && !l.dupOf && !l.retire && l.ok && l.score >= criteria.alerteScoreMin)
       .filter((l) => !l.publishedAt || new Date(l.publishedAt).getTime() > seuilDate);
     console.log(`${aAlerter.length} annonce(s) à signaler (score ≥ ${criteria.alerteScoreMin}).`);
 

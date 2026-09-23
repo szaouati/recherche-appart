@@ -32,6 +32,33 @@ test('score : borné 0-100, et meilleur avec balcon+ascenseur', () => {
   const nu = scoreListing({ ...base, features: {}, elevator: false, floor: 1, dpe: 'E' }, c, { medianPpm: 35 }).score;
   assert.ok(bon > nu && bon <= 100 && nu >= 0);
 });
+test('score : un critère vraiment inconnu (null) ne pénalise pas — son poids sort du calcul', () => {
+  // Deux annonces identiques, sauf qu'on ignore tout de l'étage/ascenseur/DPE de la seconde
+  // (comme une alerte e-mail). Sans la correction, ces poids comptaient pour 0 tout en restant
+  // dans le total : la seconde annonce était mécaniquement moins bien notée pour ça seul.
+  const connue = scoreListing(base, c, { medianPpm: 35 });
+  const inconnue = scoreListing({ ...base, elevator: null, floor: null, dpe: null }, c, { medianPpm: 35 });
+  assert.ok(inconnue.score > 0);
+  // Les critères réellement connus (prix, surface, arrondissement, balcon…) sont notés à l'identique :
+  // seul l'ensemble de calcul (le dénominateur) change, pas leur valeur propre.
+  const memePoints = (s, cle) => s.detail.find((d) => d.cle === cle)?.valeur;
+  assert.equal(memePoints(connue, 'prix'), memePoints(inconnue, 'prix'));
+  assert.equal(memePoints(inconnue, 'ascenseur'), null);
+});
+test('score : sans vraie description (texteLimite), un équipement non mentionné est inconnu, pas "non"', () => {
+  const sansTexte = { ...base, features: {}, texteLimite: true };
+  const avecTexte = { ...base, features: {} }; // Bien'ici : silence = signal réel d'absence
+  const a = scoreListing(sansTexte, c, { medianPpm: 35 });
+  const b = scoreListing(avecTexte, c, { medianPpm: 35 });
+  assert.equal(a.detail.find((d) => d.cle === 'balcon').valeur, null);
+  assert.equal(b.detail.find((d) => d.cle === 'balcon').valeur, 0);
+  assert.ok(a.score > b.score); // le manque de texte n'est plus compté comme un défaut
+});
+test('checkHard : une annonce e-mail (texteLimite) est signalée « à vérifier »', () => {
+  const r = checkHard({ ...base, texteLimite: true }, c);
+  assert.equal(r.ok, true);
+  assert.ok(r.aVerifier.some((m) => m.includes('e-mail')));
+});
 test('score : poids à 0 = critère ignoré', () => {
   const sans = mergeCriteria({ poids: { balcon: 0 } });
   const a = scoreListing(base, sans, {});

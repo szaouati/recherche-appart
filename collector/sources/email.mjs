@@ -46,6 +46,10 @@ async function normaliserSeLoger(brut, dateEmail) {
     publishedAt: (dateEmail ?? new Date()).toISOString(),
     description: brut.title ?? '',
     features: extractFeatures(brut.title ?? '', ''),
+    // Une alerte e-mail ne donne qu'un titre court, jamais une vraie description : une mention
+    // absente n'est pas un signal fiable d'absence (voir docs/score.mjs). Distinct de Bien'ici, où
+    // la description réelle rend ce même silence un peu plus parlant.
+    texteLimite: true,
   };
 }
 

@@ -85,13 +85,27 @@ export function checkHard(l, c) {
   if (c.exclure.rdc && (l.floor === 0 || l.features?.rdc)) rejets.push('Rez-de-chaussée');
   if (c.exclure.dpeFG && ['F', 'G'].includes(l.dpe)) rejets.push(`DPE ${l.dpe}`);
   if (c.exclure.coloc && (l.features?.coloc || l.features?.sousLocation)) rejets.push('Colocation / sous-location');
+  if (l.texteLimite) aVerifier.push('étage/ascenseur/DPE/équipements (annonce e-mail, détails limités)');
 
   return { ok: rejets.length === 0, rejets, aVerifier };
 }
 
 // --- Score pondéré 0-100 ---------------------------------------------------
 // Chaque critère vaut 0..1 ; ce qui n'apparaît pas dans l'annonce vaut 0 (on ne devine pas).
-// score = 100 × Σ(poids × valeur) / Σ(poids)
+// score = 100 × Σ(poids × valeur) / Σ(poids), sur les SEULS critères connus pour cette annonce.
+//
+// Point important : un critère à `null` (vraiment inconnu, ex. étage/ascenseur/DPE absents d'une
+// alerte e-mail) sort entièrement du calcul — poids compris — plutôt que de compter pour 0 tout en
+// gardant son poids. Sans ça, une source qui donne moins de détails (une alerte e-mail : prix,
+// surface, pièces, zone — rien d'autre) serait mécaniquement mal notée par rapport à une source plus
+// riche (l'API d'une agrégatrice), non pas parce que le logement est moins bien, mais simplement
+// parce qu'on en sait moins. Le score reflète alors « à quel point ce qu'on SAIT satisfait ses
+// critères », pas « à quel point cette source est bavarde ».
+//
+// Pour les équipements repérés dans le texte (balcon, lumineux, calme…) : quand une annonce n'a
+// qu'un titre très court sans vraie description (`l.texteLimite`), une mention trouvée compte
+// toujours, mais une mention absente devient « inconnue » plutôt que « non ». Avec une vraie
+// description (Bien'ici), l'absence reste un signal — imparfait mais réel — d'absence.
 const COMPOSANTS = {
   prix: (l, c) => (l.price == null ? null : clamp((c.budgetMax - l.price) / (c.budgetMax * 0.3))),
   prixM2: (l, c, ctx) => {
@@ -101,16 +115,16 @@ const COMPOSANTS = {
   },
   surface: (l, c) => (l.surface == null ? null : clamp((l.surface - c.surfaceMin) / (c.surfaceMin * 0.5))),
   arrondissementsPref: (l, c) => (l.arrondissement == null ? null : c.arrondissementsPref.includes(l.arrondissement) ? 1 : 0),
-  balcon: (l) => (l.features?.balcon || l.features?.terrasse ? 1 : 0),
+  balcon: (l) => (l.features?.balcon || l.features?.terrasse ? 1 : l.texteLimite ? null : 0),
   ascenseur: (l) => (l.elevator === true ? 1 : l.floor != null && l.floor <= 2 ? 0.5 : l.elevator == null ? null : 0),
   etageEleve: (l) => (l.floor == null ? null : l.floor >= 4 ? 1 : l.floor === 3 ? 0.7 : l.floor === 2 ? 0.4 : 0),
   dpe: (l) => (l.dpe == null ? null : { A: 1, B: 1, C: 0.8, D: 0.5, E: 0.2 }[l.dpe] ?? 0),
-  lumineux: (l) => (l.features?.lumineux ? 1 : 0),
-  calme: (l) => (l.features?.calme ? 1 : 0),
-  traversant: (l) => (l.features?.traversant ? 1 : 0),
-  cave: (l) => (l.features?.cave ? 1 : 0),
-  parking: (l) => (l.features?.parking ? 1 : 0),
-  parquet: (l) => (l.features?.parquet ? 1 : 0),
+  lumineux: (l) => (l.features?.lumineux ? 1 : l.texteLimite ? null : 0),
+  calme: (l) => (l.features?.calme ? 1 : l.texteLimite ? null : 0),
+  traversant: (l) => (l.features?.traversant ? 1 : l.texteLimite ? null : 0),
+  cave: (l) => (l.features?.cave ? 1 : l.texteLimite ? null : 0),
+  parking: (l) => (l.features?.parking ? 1 : l.texteLimite ? null : 0),
+  parquet: (l) => (l.features?.parquet ? 1 : l.texteLimite ? null : 0),
 };
 
 export function scoreListing(l, c, ctx = {}) {
@@ -122,11 +136,11 @@ export function scoreListing(l, c, ctx = {}) {
     if (!w) continue;
     if (cle === 'arrondissementsPref' && !c.arrondissementsPref.length) continue;
     const v = COMPOSANTS[cle](l, c, ctx);
-    den += w;
+    if (v != null) den += w; // poids exclu du calcul quand le critère est vraiment inconnu
     num += w * (v ?? 0);
     detail.push({ cle, label, poids: w, valeur: v, points: 0 });
   }
-  for (const d of detail) d.points = den ? Math.round((100 * d.poids * (d.valeur ?? 0)) / den) : 0;
+  for (const d of detail) d.points = den && d.valeur != null ? Math.round((100 * d.poids * d.valeur) / den) : 0;
   return { score: den ? Math.round((100 * num) / den) : 0, detail };
 }
 

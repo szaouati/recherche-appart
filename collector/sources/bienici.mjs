@@ -121,3 +121,22 @@ export async function fetchBienici(criteria, { mode = 'full', log = console.log 
   if (acc.size === 0 && warnings.length) throw new Error(warnings[0]);
   return { items: [...acc.values()], warnings };
 }
+
+// --- Vérification ciblée de disponibilité -------------------------------------------------------
+// Piège découvert le 23/09/2026 : une annonce peut rester dans les résultats de RECHERCHE de Bien'ici
+// (realEstateAds.json, utilisé pour la collecte) plusieurs semaines après avoir été retirée par
+// l'agence — leur index de recherche n'est pas synchronisé avec la fiche individuelle. Le champ
+// `status.onTheMarket` de l'API de recherche est lui-même toujours à `false`, y compris pour des
+// annonces fraîches (inutilisable). Seule l'API de FICHE (realEstateAd.json?id=...) donne un signal
+// fiable et à jour — vérifié à la main sur une annonce retirée (false) et une toute fraîche (true).
+// Coûteux à grande échelle (un appel par annonce) : on ne vérifie donc que les mieux classées,
+// c'est-à-dire celles qu'elle verrait réellement (voir l'appel dans collect.mjs).
+export async function verifierDisponibilite(id) {
+  const res = await fetch(`https://www.bienici.com/realEstateAd.json?id=${encodeURIComponent(id)}&filters=%7B%7D`, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; recherche-appart-perso/1.0)' },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) return null; // on ne sait pas → on ne touche pas à l'annonce, par prudence
+  const data = await res.json().catch(() => null);
+  return typeof data?.status?.onTheMarket === 'boolean' ? data.status.onTheMarket : null;
+}

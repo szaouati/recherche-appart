@@ -115,7 +115,7 @@ function calculer() {
   ranked = rankListings(toutes(), criteria).listings;
 }
 
-const actives = (l) => l.source === 'Manuel' || (!l.dupOf && (!meta.lastFullAt || new Date(l.last_seen) > new Date(new Date(meta.lastFullAt).getTime() - 48 * 36e5)));
+const actives = (l) => l.source === 'Manuel' || (!l.dupOf && !l.retire && (!meta.lastFullAt || new Date(l.last_seen) > new Date(new Date(meta.lastFullAt).getTime() - 48 * 36e5)));
 
 function filtrer() {
   const ok = ranked.filter((l) => l.ok && actives(l));
