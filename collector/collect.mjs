@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mergeCriteria, rankListings } from '../docs/score.mjs';
 import { fetchBienici } from './sources/bienici.mjs';
+import { fetchEmail } from './sources/email.mjs';
 import { formatAlert, sendTelegram, telegramConfigured } from './notify.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -24,7 +25,10 @@ const FRAICHEUR_ALERTE_JOURS = 3; // pas d'alerte pour une annonce publiée il y
 
 // Ajouter une source = ajouter une ligne ici (fonction async (criteria) => listings normalisés).
 // Chaque source renvoie { items, warnings }.
-const SOURCES = [{ name: "Bien'ici", run: (c, mode) => fetchBienici(c, { mode }) }];
+const SOURCES = [
+  { name: "Bien'ici", run: (c, mode) => fetchBienici(c, { mode }) },
+  { name: 'E-mail (SeLoger)', run: (c) => fetchEmail(c) },
+];
 
 // Une même annonce est souvent postée par plusieurs agences. On garde la plus ancienne et on marque
 // les autres (dupOf) : le site et les alertes les ignorent. Clé prudente : prix, surface, arrondissement,

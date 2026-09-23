@@ -9,7 +9,8 @@ GitHub Actions (cron 30 min)  →  collector/collect.mjs  →  docs/data/listing
                                         └─ score ≥ seuil ? → Telegram
 ```
 
-- **Aucune dépendance npm.** Node 20+ suffit (le workflow utilise Node 22).
+- **Presque aucune dépendance npm.** Node 20+ suffit (le workflow utilise Node 22) — seule exception : `imapflow` +
+  `mailparser` pour lire les alertes e-mail (IMAP/MIME), voir « Phase 2 ».
 - **Un seul moteur de score** (`docs/score.mjs`) partagé par le site et par le bot : ils classent toujours pareil.
 - Coût : 0 € (dépôt public). Voir « Confidentialité ».
 
@@ -19,7 +20,8 @@ GitHub Actions (cron 30 min)  →  collector/collect.mjs  →  docs/data/listing
 |---|---|---|
 | Bien'ici | ✅ branchée, testée | API JSON du site. Agrège de nombreux réseaux d'agences. ~490 annonces parisiennes ≤ 1 500 € et ≥ 30 m² au 21/09/2026. |
 | PAP, SeLoger, Leboncoin (accès direct) | ❌ bloqué | HTTP 403 dès la première requête, même avec des en-têtes de navigateur. Anti-bot + CGU. Non contournable proprement depuis GitHub Actions. |
-| Alertes e-mail (PAP, SeLoger) | 📬 alertes reçues, pas encore lues par le bot | Créées sur `alertes.appart.tabatha@gmail.com`, opérationnelles depuis le 22/09/2026. Reste à écrire `collector/sources/email.mjs`. Voir « Phase 2 ». |
+| E-mail SeLoger | ✅ branchée, testée | IMAP + analyse HTML déterministe. Voir « Phase 2 ». |
+| E-mail PAP, Leboncoin | 📬 alertes créées, pas encore lues | PAP : aucune vraie annonce reçue à ce jour. Leboncoin : alerte pas encore créée. |
 | Ajout manuel (Facebook, bouche-à-oreille) | ✅ | Bouton « + Ajouter une annonce » sur le site. Stocké dans le navigateur de Tabatha. |
 
 ## Mise en ligne
@@ -131,7 +133,7 @@ node collector/collect.mjs            # collecte complète (~6 s) et écrit docs
 node collector/collect.mjs --quick    # seulement les annonces les plus récentes
 node collector/collect.mjs --dry      # simulation : n'écrit rien, n'envoie rien, affiche les alertes
 python3 -m http.server 8765 --directory docs   # puis http://localhost:8765
-node --test test/*.test.mjs           # 11 tests (filtres, score, verdicts, détection de caractéristiques)
+node --test test/*.test.mjs           # 15 tests (filtres, score, verdicts, e-mail SeLoger, détection de caractéristiques)
 ```
 
 ## Comment l'annonce est notée
@@ -173,45 +175,67 @@ derrière Cloudflare Access. La page contient `noindex` mais ce n'est pas une pr
 
 ## Phase 2 : alertes e-mail (PAP, SeLoger, Leboncoin)
 
-Adresse dédiée `alertes.appart.tabatha@gmail.com`, créée le 22/09/2026, alertes PAP et SeLoger opérationnelles depuis le
-22/09/2026 (Leboncoin à créer). Une source `collector/sources/email.mjs` (à écrire) lira ces e-mails et extraira lien /
-prix / surface / arrondissement de chaque annonce, pour les injecter dans le même pipeline (donc même score, même alerte
-Telegram, mêmes filtres).
+**SeLoger : branché et actif** depuis le 23/09/2026 (`collector/sources/email.mjs`). PAP et Leboncoin : pas encore
+(aucune vraie alerte PAP reçue à ce jour — budget/zone très restreints, 18e ≤ 900 €, normal que ça prenne du temps ;
+Leboncoin n'a pas encore d'alerte créée). Voir `CLAUDE.md` § pipeline e-mail pour la suite.
 
-Extraction envisagée via l'API Claude (un appel structuré par e-mail, plutôt qu'un analyseur regex par site — plus robuste
-aux changements de template, pas besoin de code spécifique par expéditeur) : clé `ANTHROPIC_API_KEY` en secret GitHub
-Actions (jamais côté navigateur), valeurs reclampées après coup comme le fait déjà `worker/src/index.mjs` pour les
-critères, contenu de l'e-mail traité comme une donnée non fiable et jamais comme des instructions.
+Adresse dédiée `alertes.appart.tabatha@gmail.com`, créée le 22/09/2026. Lue par **IMAP** (`imapflow` + `mailparser`,
+seules dépendances npm du projet — voir « Pourquoi deux dépendances » plus bas), secrets `IMAP_USER` /
+`IMAP_APP_PASSWORD` déjà enregistrés le 22/09/2026. Incrémental : seuls les e-mails non lus (`\Seen`) sont traités,
+puis marqués lus (succès ou échec — un e-mail durablement cassé n'est pas retenté à l'infini ; pour le refaire, le
+remarquer non lu dans Gmail). 30 e-mails maximum par passage.
 
-Accès à la boîte : le connecteur Gmail d'une session Claude Code peut être relié directement à
-`alertes.appart.tabatha@gmail.com` (confirmé le 23/09/2026) — à revérifier si beaucoup de temps a passé avant de lire
-quoi que ce soit. Sinon, IMAP classique avec les secrets `IMAP_USER` / `IMAP_APP_PASSWORD` (déjà enregistrés le
-22/09/2026). Voir `CLAUDE.md` § pipeline e-mail pour la suite.
+Le connecteur Gmail d'une session Claude Code peut aussi lire cette boîte directement (confirmé le 23/09/2026, utile
+pour inspecter de nouveaux formats sans attendre un déploiement) — à revérifier si beaucoup de temps a passé.
+
+### Décision : analyse déterministe du HTML, pas l'API Claude
+
+Le plan initial prévoyait une extraction par l'API Claude (plus robuste si le format est inconnu). Une fois le format
+SeLoger décodé sur de vrais e-mails (23/09/2026), une analyse déterministe s'est avérée meilleure : gratuite, instantanée,
+sans dépendance à un service externe, et surtout **exacte** — le HTML porte des attributs `name="adprice1_2"` /
+`adtype1_2` / `adcriteria1_2` / `adlocation1_2` / `adbutton1_2` qui identifient chaque champ sans ambiguïté (le suffixe
+numérique est absent quand l'e-mail ne contient qu'une seule annonce, ex. le format « annonce exclusive » d'une agence
+partenaire — `collector/lib/parse-seloger-email.mjs` gère les deux). L'API Claude reste la bonne option pour un
+expéditeur dont le format n'a pas encore été décodé (PAP, Leboncoin) : à réévaluer une fois qu'un vrai e-mail de leur
+part sera disponible.
+
+**⚠️ Piège découvert en cours de route** : mon premier jet analysait la *conversion texte de Gmail* (celle que renvoie
+l'outil de lecture d'e-mails, pratique pour repérer un format visuellement) plutôt que le **HTML brut** que IMAP fournit
+réellement. Les deux ne s'écrivent pas pareil (linéarisation des liens différente) : un analyseur calé sur l'un ne
+fonctionne pas forcément sur l'autre. `parse-seloger-email.mjs` a été réécrit contre le HTML brut avant d'être fiable —
+tout futur analyseur (PAP, Leboncoin) doit être construit et testé contre le HTML brut (`parsed.html` de `mailparser`),
+jamais contre une conversion texte d'outil de lecture.
 
 ### Format SeLoger, décodé le 23/09/2026 sur de vrais e-mails (`samples/seloger-*.txt`, gitignorés)
 
-Trois échantillons réels sauvegardés : `seloger-1-annonce.txt`, `seloger-2-annonces.txt` (plusieurs biens dans un même
-e-mail), `seloger-exclusif.txt` (format « annonce exclusive » d'une agence partenaire, structure légèrement différente).
-Aucun e-mail PAP avec une vraie annonce n'est encore arrivé (seulement les e-mails de création de compte/alerte) —
-budget/zone très restreints (18e, ≤ 900 €), normal que ça prenne plus de temps.
+Trois échantillons réels sauvegardés (texte, pour référence rapide) : `seloger-1-annonce.txt`, `seloger-2-annonces.txt`
+(plusieurs biens), `seloger-exclusif.txt` (agence partenaire). Le HTML brut correspondant a servi à écrire et tester
+`parse-seloger-email.mjs` (fixtures réelles, allégées du CSS, dans `test/parse-seloger-email.test.mjs`).
 
-- **Repère fiable** : chaque bien se termine par un lien `https://click.by.seloger.com/?qs=...` suivi du texte
-  **« Voir l'annonce »**. C'est CE lien-là (pas les autres liens de tracking du bloc — « Localisation différente »,
-  « Gérer mes alertes »…) qui pointe vers l'annonce. Découper le texte en blocs sur ce repère.
-- **Résolution de l'URL** : `https://click.by.seloger.com/?qs=…` est un redirecteur 302, résolu en **un seul saut**
-  (testé par `curl -D - --max-redirs 0`) vers une URL stable du type
-  `https://www.seloger.com/annonce/location/ile-de-france/paris-75/paris-75000/<ID>?utm_...`. Garder `<ID>`
-  (ex. `26BVYT451S9C`) comme identifiant unique (`seloger:<ID>`), et l'URL nettoyée des `utm_*` comme lien affiché.
-  La page de l'annonce elle-même répond 403 en accès direct (anti-bot, comme Bien'ici) : inutile d'aller plus loin
-  que le premier saut, on n'a pas besoin de charger la page.
+- **Repère fiable** : chaque bien est encadré par `<!--LISTING--> … <!--END LISTING-->` et contient des liens
+  `<a href="TRACKING_URL" name="adXXX...">` où XXX ∈ `{price, type, criteria, location, button}`. Le lien `adbutton`
+  (texte « Voir l'annonce ») est LE lien de l'annonce — les autres (`adimage`, « Localisation différente », « Gérer mes
+  alertes »…) sont des liens de navigation/désabonnement à ignorer.
+- **Résolution de l'URL** : le lien `adbutton` (`https://click.by.seloger.com/?qs=…`) est un redirecteur 302, résolu en
+  **un seul saut** (`fetch(url, {redirect:'manual'})`, testé) vers une URL stable du type
+  `https://www.seloger.com/annonce/location/ile-de-france/paris-75/paris-75000/<ID>?utm_...`. `<ID>` (ex.
+  `26BVYT451S9C`) sert d'identifiant unique (`seloger:<ID>`), l'URL nettoyée des `utm_*` de lien affiché. La page de
+  l'annonce elle-même répond 403 en accès direct (anti-bot, comme Bien'ici) : inutile d'aller plus loin que le premier
+  saut, on n'a pas besoin de charger la page.
 - **⚠️ Incohérence constatée sur une vraie donnée** : un e-mail affichait le texte « Paris 17ème arrondissement » avec
-  le code postal `(75015)` entre parenthèses juste en dessous — les deux se contredisent. **Toujours dériver
-  l'arrondissement du code postal à 5 chiffres**, jamais du texte ordinal (même logique que
-  `collector/sources/bienici.mjs::arrondissement()`), le code postal semblant être la donnée la plus fiable des deux.
-- **Prix** : ligne `NNN €/mois charges comprises` juste après le lien « Localisation différente » du bloc.
-- **Surface/pièces** : ligne `N pièce(s) . NN[,N] m²`.
-- **Titre** : parfois tronqué par SeLoger lui-même avec `...` (ex. « Studio meublé de 19m² - rue de Rome 75017 - La Fon... »)
-  — normal, ne pas essayer de le compléter.
+  le code postal `(75015)` juste en dessous — les deux se contredisent. **Toujours dériver l'arrondissement du code
+  postal à 5 chiffres**, jamais du texte ordinal (même logique que `collector/sources/bienici.mjs::arrondissement()`).
+- **Prix** : dans le champ `adprice`, motif `NNN €/mois` (« charges comprises » dans un `<span>` séparé, ignoré).
+- **Surface/pièces** : dans le champ `adcriteria`, motif `N pièce(s) · NN[,N] m²`.
+- **Titre** (`adtype`) : parfois tronqué par SeLoger lui-même avec `...` — normal, ne pas essayer de le compléter.
+- **Photo** : capturée en bonus depuis l'attribut `Background="...jpg"` du bloc (pas dans les champs `adXXX`).
 - SeLoger élargit spontanément la zone quand peu de résultats correspondent exactement (« Nous avons élargi vos critères
   de recherches ») : des arrondissements hors zone apparaissent dans l'e-mail. Sans conséquence : le filtre strict sur
   `criteria.arrondissements` (déjà dans `docs/score.mjs`) les écartera comme pour toute autre source.
+
+### Pourquoi deux dépendances npm (seule exception au « zéro dépendance »)
+
+`imapflow` (client IMAP) et `mailparser` (décodage MIME : multipart, quoted-printable/base64, charsets). Hors de portée
+d'un code fait main sans risque de bugs subtils et difficiles à détecter (encodages, dossiers imbriqués, littéraux
+IMAP…) pour un gain minime. Toutes les autres sources (Bien'ici, le site, le Worker) restent sans dépendance.
+`.github/workflows/collect.yml` installe désormais via `npm ci` avant de lancer la collecte.

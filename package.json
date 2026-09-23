@@ -8,5 +8,11 @@
     "simulation": "node collector/collect.mjs --dry",
     "test": "node --test test/*.test.mjs"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "imapflow": "^2.0.6",
+    "mailparser": "^3.9.28"
+  }
 }
