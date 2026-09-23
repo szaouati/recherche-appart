@@ -401,22 +401,9 @@ function brancher() {
     render();
   });
 
-  $('#btn-recharger-criteres').addEventListener('click', async () => {
-    // Un compte partagé n'a plus de « critères de cet appareil » : ce bouton réinitialise les
-    // critères de recherche pour TOUT LE MONDE depuis le fichier de base du dépôt.
-    if (!confirm('Recharger les critères de base pour tout le monde (remplace ce qui est actuellement partagé) ?')) return;
-    try {
-      const r = await fetch(`criteria.json?t=${Date.now()}`);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const c = await r.json();
-      await appliquerEtat('set_criteria', { criteria: c, source: 'reset' });
-      remplirFormulaire();
-      limite = 30;
-      render();
-    } catch (e) {
-      alert(`Échec du rechargement (${e.message}).`);
-    }
-  });
+  // Simple recharge de la page : utile quand l'onglet reste ouvert longtemps et qu'on veut être
+  // sûr de voir tout de suite les derniers changements (annonces, critères, favoris d'un autre appareil).
+  $('#btn-recharger-page').addEventListener('click', () => location.reload());
 }
 
 
