@@ -530,6 +530,26 @@ function proposerBulleCriteres() {
   ]);
 }
 
+// iOS (Safari) ne propose aucun vrai popup natif d'installation déclenchable en JS (contrairement à
+// Android/Chrome) : la seule option est d'expliquer nous-mêmes le geste « Partager → Sur l'écran
+// d'accueil ». On ne le propose qu'à Safari lui-même (pas Chrome/Firefox iOS, ni les navigateurs
+// intégrés d'apps tierces, où ce menu n'existe pas ou pas pareil), et jamais si déjà installée.
+function estCandidatInstallationIOS() {
+  const ua = navigator.userAgent || '';
+  const iOS = /iP(hone|od|ad)/.test(ua) || (ua.includes('Macintosh') && navigator.maxTouchPoints > 1);
+  const safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  const dejaInstallee = window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  return iOS && safari && !dejaInstallee;
+}
+function proposerBulleInstall() {
+  if (!estCandidatInstallationIOS() || store.get('bulleInstallVue', false)) return;
+  store.set('bulleInstallVue', true);
+  montrerBulle(
+    "Envie de l'avoir comme une vraie appli sur ton iPhone ? Appuie sur ⬆️ Partager en bas de Safari, puis « Sur l'écran d'accueil ».",
+    [{ texte: 'Compris', primaire: true, action: () => {} }],
+  );
+}
+
 function brancherMascotte() {
   $('#mascotte-flottante').addEventListener('click', () => ouvrirBot());
   $('#criteres-mascotte').addEventListener('click', (e) => { e.preventDefault(); ouvrirBot('Sur mes critères, je voudrais '); });
@@ -538,8 +558,13 @@ function brancherMascotte() {
     store.set('bulleAccueilVue', true);
     setTimeout(() => montrerBulle(
       "Coucou, c'est moi ! Tu peux tout me demander pour ajuster tes critères. Ce qu'on se dit ici, et tes ♥/✕/notes, Sacha les voit aussi pour adapter le site pour toi.",
-      [{ texte: 'Compris, on discute', primaire: true, action: () => ouvrirBot() }, { texte: 'Plus tard', action: () => {} }],
+      [
+        { texte: 'Compris, on discute', primaire: true, action: () => ouvrirBot() },
+        { texte: 'Plus tard', action: () => setTimeout(proposerBulleInstall, 1000) },
+      ],
     ), 1200);
+  } else {
+    setTimeout(proposerBulleInstall, 1500);
   }
 }
 
