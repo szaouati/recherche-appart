@@ -163,8 +163,11 @@ function carte(l) {
   const detail = l.ok
     ? `<ul>${l.detail.filter((d) => d.poids).map((d) => `<li><span>${esc(d.label)}</span><span>${d.points}</span><div class="bar"><i style="width:${Math.round((d.valeur ?? 0) * 100)}%"></i></div></li>`).join('')}</ul>`
     : `<ul class="rejet">${l.rejets.map((r) => `<li><span>${esc(r)}</span><span></span></li>`).join('')}</ul>`;
-  const badge = l.ok ? `<div class="score ${cls}" style="--s:${l.score}" title="Score ${l.score}/100"><span>${l.score}</span></div>` : '';
-  return `<li class="card ${l.first_seen > vuJusqua && l.source !== 'Manuel' ? 'nouveau' : ''}" data-id="${esc(l.id)}">
+  const pepite = l.ok && l.score >= 85;
+  const badge = l.ok
+    ? `<div class="score ${cls}" style="--s:${l.score}" title="Score ${l.score}/100"><span>${l.score}</span>${pepite ? '<span class="etoile" aria-hidden="true">✦</span>' : ''}</div>`
+    : '';
+  return `<li class="card ${l.first_seen > vuJusqua && l.source !== 'Manuel' ? 'nouveau' : ''} ${pepite ? 'pepite' : ''}" data-id="${esc(l.id)}">
     <div class="photo">${l.photo ? `<img src="${esc(safeUrl(l.photo))}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</div>
     <div class="body">
       <div class="prix">${l.price != null ? eur(l.price) : '—'}<small>CC</small></div>

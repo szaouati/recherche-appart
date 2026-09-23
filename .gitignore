@@ -4,3 +4,4 @@ samples/
 *.eml
 worker/.dev.vars
 worker/.wrangler/
+inspiration-chocola/

@@ -11,9 +11,20 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <symbol id="coeur-def" viewBox="0 0 24 24">
+      <path d="M12 20.2s-7.2-4.6-10-9C.4 8 2 4.8 5.6 4.8c2.1 0 3.7 1.2 4.7 2.8 1-1.6 2.6-2.8 4.7-2.8 3.6 0 5.2 3.2 3.6 6.4-2.8 4.4-10 9-10 9z" fill="currentColor"/>
+    </symbol>
+    <symbol id="flourish-def" viewBox="0 0 200 16">
+      <path d="M0 8 H84 M116 8 H200" stroke="currentColor" stroke-width="1" fill="none"/>
+      <path d="M100 2 L106 8 L100 14 L94 8 Z" fill="currentColor"/>
+    </symbol>
+  </svg>
+
   <header class="top">
     <div>
-      <h1>Mon appart à Paris</h1>
+      <h1>Mon appart à Paris <svg class="coeur" width="18" height="18" aria-hidden="true"><use href="#coeur-def"></use></svg></h1>
+      <svg class="flourish flourish--left" aria-hidden="true"><use href="#flourish-def"></use></svg>
       <p class="sub" id="maj">Chargement…</p>
       <p class="sub statut" id="statut-recherche"></p>
     </div>
@@ -90,6 +101,7 @@
   <dialog id="dlg-add">
     <form method="dialog" id="form-add" class="dlg">
       <h2>Ajouter une annonce à la main</h2>
+      <svg class="flourish flourish--sm flourish--left" aria-hidden="true"><use href="#flourish-def"></use></svg>
       <p class="hint">Pour une annonce vue ailleurs (Facebook, bouche-à-oreille, autre site). Elle est notée comme les autres.</p>
       <label>Lien <input name="url" type="url" required placeholder="https://…"></label>
       <label>Titre <input name="title" placeholder="Ex. 2 pièces rue Oberkampf"></label>
@@ -112,6 +124,7 @@
   <dialog id="dlg-settings">
     <form method="dialog" id="form-settings" class="dlg">
       <h2>Synchronisation avec le bot</h2>
+      <svg class="flourish flourish--sm flourish--left" aria-hidden="true"><use href="#flourish-def"></use></svg>
       <p class="hint">Pour enregistrer les critères depuis ce site, il faut un jeton GitHub limité à ce seul dépôt (permission « Contents : lecture et écriture »). Il reste dans ce navigateur, uniquement.</p>
       <label>Dépôt <input name="repo" placeholder="proprietaire/nom-du-depot" required></label>
       <label>Branche <input name="branch" value="main" required></label>
@@ -123,6 +136,7 @@
   <dialog id="dlg-profil">
     <div class="dlg wide">
       <div class="dlg-head"><h2>Ma recherche en détail</h2><button class="btn ghost small" id="profil-close" type="button">Fermer</button></div>
+      <svg class="flourish flourish--sm flourish--left" aria-hidden="true"><use href="#flourish-def"></use></svg>
       <p class="hint">Réponds comme tu veux, même en quelques mots. Tout est enregistré sur cet appareil, et rien n'est envoyé tant que tu n'as pas appuyé sur le bouton d'envoi.</p>
 
       <h3>1. Ce que je veux vraiment</h3>
@@ -146,6 +160,7 @@
   <dialog id="dlg-bot">
     <div class="dlg wide bot-dlg">
       <div class="dlg-head"><h2>Demander à Claude</h2><button class="btn ghost small" id="bot-close" type="button">Fermer</button></div>
+      <svg class="flourish flourish--sm flourish--left" aria-hidden="true"><use href="#flourish-def"></use></svg>
       <p class="hint">Pour ajuster tes critères en discutant. Il ne fait que ça ici : pour le reste, écris à Sacha.</p>
       <div id="bot-log" class="bot-log" aria-live="polite"></div>
       <div id="bot-proposal" class="bot-proposal" hidden></div>
