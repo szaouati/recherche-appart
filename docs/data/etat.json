@@ -1,7 +1,9 @@
 {
-  "updatedAt": "2026-09-23T10:57:07.192Z",
-  "statut": {},
+  "statut": {
+    "test:verif-deploiement": "fav"
+  },
   "notes": {},
   "manuel": [],
-  "vuJusqua": "2026-09-22T10:57:07.199Z"
+  "vuJusqua": "2026-09-22T10:57:07.199Z",
+  "updatedAt": "2026-09-23T11:16:14.453Z"
 }
