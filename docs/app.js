@@ -221,7 +221,7 @@ function dessinerSources() {
 
 function statutRecherche() {
   const c = criteria;
-  const ok = ranked.filter((l) => l.ok);
+  const ok = ranked.filter((l) => l.ok && actives(l));
   const nouvelles = ok.filter((l) => l.first_seen > vuJusqua && statut[l.id] !== 'ecarte').length;
   const zone = c.arrondissements.length === 1 ? `le ${c.arrondissements[0]}e` : c.arrondissements.length ? `${c.arrondissements.length} arrondissements` : 'tout Paris';
   const meilleure = ok.find((l) => statut[l.id] !== 'ecarte');
@@ -553,6 +553,10 @@ function proposerBulleInstall() {
 function brancherMascotte() {
   $('#mascotte-flottante').addEventListener('click', () => ouvrirBot());
   $('#criteres-mascotte').addEventListener('click', (e) => { e.preventDefault(); ouvrirBot('Sur mes critères, je voudrais '); });
+  // Si elle a filé discuter avec le bot (« Compris, on discute ») plutôt que de choisir « Plus
+  // tard », on propose quand même l'installation à la fermeture du chat, sans quoi ça ne se
+  // représente jamais de la session.
+  $('#dlg-bot').addEventListener('close', () => setTimeout(proposerBulleInstall, 400));
   // Premher contact : une seule fois, on se présente et on explique la transparence avec Sacha.
   if (!store.get('bulleAccueilVue', false)) {
     store.set('bulleAccueilVue', true);
