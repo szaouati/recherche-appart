@@ -195,7 +195,7 @@
     {
       "id": "manuel:1790178254428",
       "source": "Manuel",
-      "url": "https://www.leboncoin.fr/recherche?category=10&locations=Paris_75018__48.89247_2.34464_2141&price=0-900&square=10-max&real_estate_type=2",
+      "url": "https://www.leboncoin.fr/ad/locations/3266726181",
       "title": "Leboncoin (recherche) — 900€, 14m², 1p — Jules Joffrin, balcon",
       "price": 900,
       "surface": 14,
@@ -538,5 +538,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-23T16:14:45.898Z"
+  "updatedAt": "2026-09-23T16:14:47.595Z"
 }
