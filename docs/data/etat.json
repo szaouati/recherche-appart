@@ -1,7 +1,27 @@
 {
   "statut": {},
   "notes": {},
-  "manuel": [],
+  "manuel": [
+    {
+      "id": "manuel:1790178007124",
+      "source": "Manuel",
+      "url": "https://www.pap.fr/annonces/appartement-paris-18e-75018-r465302684",
+      "title": "Studio meublé - station Marcadet Poissonnières",
+      "price": 628,
+      "surface": 14,
+      "rooms": 1,
+      "arrondissement": 18,
+      "floor": null,
+      "elevator": null,
+      "dpe": null,
+      "furnished": null,
+      "features": {},
+      "first_seen": "2026-09-23T15:40:07.124Z",
+      "last_seen": "2026-09-23T15:40:07.124Z",
+      "publishedAt": "2026-09-23T15:40:07.124Z",
+      "photo": null
+    }
+  ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-23T11:16:17.023Z"
+  "updatedAt": "2026-09-23T15:40:07.331Z"
 }
