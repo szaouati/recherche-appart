@@ -2252,6 +2252,52 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:45:04.884Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Où en est le marché de l'immobilier locatif en ce moment précis pour mon cas ?",
+      "reply": "Voici ce que je vois, sur les annonces à moins de **900 €** que je suis dans le 18e (18e uniquement, comme dans tes critères) :\n\n- **36 annonces** suivies actuellement dans ce secteur/budget\n- Loyer médian : **800 €**, avec la moitié des annonces entre 684 € et 850 €\n- Prix au m² médian : environ **41,8 €/m²**\n- Pour les studios/1 pièce (30 annonces) : médiane à 798 €, contre 863 € pour les 2 pièces (seulement 4 annonces)\n- **17 annonces** sur 36 sont proches de ton plafond de 900 € (dans les 10% les plus hauts)\n\nCôté dynamique récente : **3 nouvelles annonces** cette semaine contre 6 la semaine précédente, aucune disparition notée, et aucune baisse de prix repérée. C'est un historique encore court (depuis fin juillet), donc je ne peux pas vraiment parler de tendance.\n\nPour comparer, dans les autres arrondissements sous ce même budget, le 20e a un loyer médian un peu plus haut (825 €) et le 16e plus bas (731 €) — mais toi tu vises spécifiquement le 18e.\n\n⚠️ Précisions importantes : ces chiffres ne portent que sur les annonces sous ton budget de 900 €, donc c'est l'offre *accessible* pour toi, pas le marché global. Ce sont des loyers demandés (pas signés), et je n'ai pas les plafonds d'encadrement officiels — pour ça il faut le simulateur de la Ville de Paris.\n\nTu veux que je te montre les meilleures annonces actuelles du lot, ou qu'on regarde si élargir à un autre arrondissement t'ouvrirait plus d'options ?",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "market_snapshot"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
