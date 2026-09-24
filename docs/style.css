@@ -240,3 +240,10 @@ select.suivi { border: 1px solid var(--line); background: transparent; color: va
 .bot-proposal .brouillon { width: 100%; box-sizing: border-box; margin: 6px 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 14px/1.4 var(--sans); }
 .bot-proposal .avert { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 6px 8px; }
 .bot-proposal p { margin: 4px 0; }
+
+.bot-idees { flex-shrink: 0; margin-top: 6px; max-height: 38vh; overflow-y: auto; font-size: 13px; }
+.bot-idees > summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+.bot-idees h5 { margin: 10px 0 4px; font: 600 12px var(--sans); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.bot-idees .idee-liste { display: flex; flex-wrap: wrap; gap: 6px; }
+.bot-idees .idee { text-align: left; font: 13px/1.3 var(--sans); padding: 6px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.bot-idees .idee:hover { border-color: var(--gold); }

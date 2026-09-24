@@ -1,5 +1,5 @@
 import { CRITERES, mergeCriteria, rankListings, verdictScore, estVisible } from './score.mjs';
-import { STATUTS_LIBELLES, MARQUEURS, remplirMarqueurs, construireIcs, relanceDue, libelleRelance, formaterReponse } from './agent-ui.mjs';
+import { STATUTS_LIBELLES, MARQUEURS, remplirMarqueurs, construireIcs, relanceDue, libelleRelance, formaterReponse, IDEES_QUESTIONS } from './agent-ui.mjs';
 
 const $ = (s, r = document) => r.querySelector(s);
 const store = {
@@ -653,9 +653,15 @@ async function envoyerBot(message) {
   }
 }
 
+function dessinerIdees() {
+  $('#bot-idees-liste').innerHTML = IDEES_QUESTIONS.map((g) => `<h5>${esc(g.titre)}</h5><div class="idee-liste">${g.questions.map((q) => `<button type="button" class="idee">${esc(q)}</button>`).join('')}</div>`).join('');
+  $('#bot-idees').open = !botChat.length; // ouvertes au premier usage, repliées ensuite
+}
+
 function ouvrirBot(prefill) {
   cacherBulle();
   dessinerBotLog();
+  dessinerIdees();
   $('#dlg-bot').showModal();
   const ta = $('#bot-input');
   if (prefill) ta.value = prefill;
@@ -666,6 +672,12 @@ function ouvrirBot(prefill) {
 function brancherBot() {
   $('#btn-bot').addEventListener('click', () => ouvrirBot());
   $('#bot-close').addEventListener('click', () => $('#dlg-bot').close());
+  $('#bot-idees-liste').addEventListener('click', (e) => {
+    const b = e.target.closest('.idee');
+    if (!b || botEnvoi) return;
+    $('#bot-idees').open = false;
+    envoyerBot(b.textContent);
+  });
   $('#bot-form').addEventListener('submit', (e) => {
     e.preventDefault();
     if (botEnvoi) return;

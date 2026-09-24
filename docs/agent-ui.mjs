@@ -99,3 +99,12 @@ export function formaterReponse(texte) {
     .map((l) => (/^\s*\|.*\|\s*$/.test(l) ? l.trim().slice(1, -1).split('|').map((c) => c.trim()).join(' · ') : l));
   return echapperHtml(lignes.join('\n')).replace(/\*\*([^*\n]+?)\*\*/g, '<b>$1</b>');
 }
+
+/** Questions proposées en un tap dans le chat (rangées par thème). Chacune correspond à un outil du bot. */
+export const IDEES_QUESTIONS = [
+  { titre: 'Où j\'en suis', questions: ['Où j\'en suis de mes recherches ?', 'Que dois-je faire aujourd\'hui ?', 'Quoi de neuf depuis ma dernière visite ?'] },
+  { titre: 'Mes demandes et rendez-vous', questions: ['Qui a répondu à mes demandes ?', 'Où en sont mes demandes en cours ?', 'C\'est quand mes prochains rendez-vous ?', 'Qui dois-je relancer, et avec quel message ?', 'Quels favoris n\'ai-je pas encore contactés ?', 'Un de mes favoris a-t-il disparu ?'] },
+  { titre: 'Le marché', questions: ['Où en est le marché de l\'immobilier locatif en ce moment précis pour mon cas ?', 'Est-ce que les annonces partent vite ?', 'Pourquoi j\'ai si peu d\'annonces ?'] },
+  { titre: 'Trouver et comparer', questions: ['Quelles sont mes meilleures annonces ?', 'Y a-t-il des baisses de prix ?', 'Y a-t-il une annonce avec balcon et ascenseur ?', 'Compare les 3 moins chères', 'Garde mes 2 meilleures'] },
+  { titre: 'Contacter et se protéger', questions: ['Rédige un message pour la première de mes meilleures annonces', 'Est-ce que la première de mes meilleures annonces est une arnaque ?', 'Aide-moi à préparer une visite'] },
+];

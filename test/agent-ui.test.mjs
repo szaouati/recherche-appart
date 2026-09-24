@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formaterReponse, remplirMarqueurs, construireIcs, relanceDue, libelleRelance, STATUTS_LIBELLES } from '../docs/agent-ui.mjs';
+import { IDEES_QUESTIONS, formaterReponse, remplirMarqueurs, construireIcs, relanceDue, libelleRelance, STATUTS_LIBELLES } from '../docs/agent-ui.mjs';
 
 test('remplirMarqueurs : remplace par « Mon dossier », signale ce qui manque, n\'invente rien', () => {
   const { texte, manquants } = remplirMarqueurs('Bonjour, je suis {{situation}}. Merci, {{prenom}} — {{telephone}} — {{iban}}', { prenom: 'Tabatha', situation: 'étudiante en master' });
@@ -56,4 +56,12 @@ test('formaterReponse : gras et tableaux lisibles, HTML toujours échappé', () 
   const t = formaterReponse('| Annonce | Prix |\n|---|---|\n| A | 550 € |');
   assert.equal(t, 'Annonce · Prix\nA · 550 €');
   assert.equal(formaterReponse('- un\n- deux'), '- un\n- deux');
+});
+
+test('idées de questions : thèmes non vides, aucune question en double', () => {
+  const toutes = IDEES_QUESTIONS.flatMap((g) => g.questions);
+  assert.ok(IDEES_QUESTIONS.length >= 4 && toutes.length >= 15);
+  assert.equal(new Set(toutes).size, toutes.length);
+  for (const q of ['Où j\'en suis de mes recherches ?', 'Qui a répondu à mes demandes ?', 'C\'est quand mes prochains rendez-vous ?']) assert.ok(toutes.includes(q));
+  assert.ok(toutes.every((q) => q.length <= 120 && q.endsWith('?') || !q.endsWith('?')));
 });
