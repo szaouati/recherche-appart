@@ -2214,6 +2214,53 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:08:50.957Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Est-ce que la moins chère de mes annonces est une arnaque ?",
+      "reply": "La moins chère c'est l'annonce à 550 € (13 m², 3e étage, 18e), et bonne nouvelle : aucun signal d'alerte détecté, son prix au m² (42 €) est même dans la médiane du secteur. 👍\n\nCeci dit, \"pas de signal\" ne veut pas dire \"certitude zéro risque\" : garde les réflexes habituels avant de t'engager — ne rien payer ni envoyer de pièce d'identité/RIB avant une visite, et vérifie que la personne qui te fait visiter est bien le proprio ou son agence.\n\nTu veux que je te prépare un message de contact pour celle-ci ?",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "list_listings",
+        "assess_risk"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
