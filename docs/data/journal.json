@@ -2022,6 +2022,52 @@
         "alerteActive": true,
         "alerteScoreMin": 45
       }
+    },
+    {
+      "ts": "2026-09-24T13:42:37.010Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Où j'en suis de mes recherches ?",
+      "reply": "Voici où tu en es 🙂\n\n**692** annonces suivies au total, dont **21** passent tes filtres actuels (18e, ≤900€, ≥10m², pas de RDC, pas de DPE F/G, pas de coloc). Et bonne nouvelle : **20 sont nouvelles** depuis ta dernière visite !\n\nCôté suivi :\n- Aucun favori, aucune annonce écartée, aucun contact engagé pour l'instant\n- Donc pas de relance à faire ni de visite prévue\n\nLes meilleures pas encore contactées :\n- **900 €** — 30m², 2 pièces, 5e étage, La Chapelle-Marx Dormoy (DPE E) → son score est bon, \"lui correspond très bien\"\n- **550 €** — 13m², 1 pièce, 3e étage, 18e non précisé\n- **590 €** — 13m², 1 pièce, 2e étage, La Chapelle-Marx Dormoy (DPE D)\n\nTu veux que je te montre les 20 nouvelles en détail, ou plutôt qu'on commence à contacter les meilleures ?",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "get_search_overview"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
