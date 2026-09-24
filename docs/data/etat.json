@@ -157,7 +157,7 @@
     {
       "id": "manuel:1790178431865",
       "source": "Manuel",
-      "url": "https://www.seloger.com/classified-search?distributionTypes=Rent&estateTypes=Apartment&locations=POCOFR4812&priceMax=900",
+      "url": "https://www.seloger.com/annonce/location/ile-de-france/paris-75/paris-75000/268E2UKTH45G",
       "title": "SeLoger (recherche) — 850€, 26m², 1p — Clignancourt-Jules Joffrin (LocService)",
       "price": 850,
       "surface": 26,
@@ -557,5 +557,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T09:11:06.611Z"
+  "updatedAt": "2026-09-24T09:11:08.143Z"
 }
