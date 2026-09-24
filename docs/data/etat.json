@@ -60,25 +60,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790233639429",
-      "source": "Manuel",
-      "url": "https://www.seloger.com/annonce/location/ile-de-france/paris-75/paris-75000/26UN9BSFB757",
-      "title": "SeLoger — 770€, 16,8m², 1p — Moskowa-Porte Montmartre-Porte de Clignancourt (dès le 24/09)",
-      "price": 770,
-      "surface": 16.8,
-      "rooms": 1,
-      "arrondissement": 18,
-      "floor": 3,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-24T07:07:19.429Z",
-      "last_seen": "2026-09-24T07:07:19.429Z",
-      "publishedAt": "2026-09-24T07:07:19.429Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790233636590",
       "source": "Manuel",
       "url": "https://www.leboncoin.fr/ad/locations/3275548024",
@@ -481,5 +462,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T09:30:43.070Z"
+  "updatedAt": "2026-09-24T10:33:35.154Z"
 }
