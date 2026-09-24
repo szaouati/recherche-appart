@@ -404,25 +404,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790178011317",
-      "source": "Manuel",
-      "url": "https://www.pap.fr/annonces/appartement-paris-18e-75018-r465301195",
-      "title": "Appartement lumineux meublé - rue Jean Cottin (bail étudiant 9 mois)",
-      "price": 763,
-      "surface": 22.67,
-      "rooms": 2,
-      "arrondissement": 18,
-      "floor": null,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-23T15:40:11.317Z",
-      "last_seen": "2026-09-23T15:40:11.317Z",
-      "publishedAt": "2026-09-23T15:40:11.317Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790178008804",
       "source": "Manuel",
       "url": "https://www.pap.fr/annonces/appartement-paris-18e-75018-r433301298",
@@ -443,5 +424,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T10:33:36.821Z"
+  "updatedAt": "2026-09-24T10:33:38.928Z"
 }
