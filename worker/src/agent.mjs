@@ -1,7 +1,8 @@
 // Agent du chat « Demander à Claude » : boucle d'outils autour de l'API Anthropic.
 //
 // Deux familles d'outils, avec deux niveaux de risque très différents :
-//  - LECTURE (list_listings, get_listing, compare_listings, explain_funnel, assess_risk, get_contact_board) :
+//  - LECTURE (list_listings, get_listing, compare_listings, explain_funnel, assess_risk, get_contact_board,
+//    get_search_overview, market_snapshot) :
 //    exécutés ICI, sur les données du dépôt, sans effet de bord. Leur résultat est renvoyé au modèle.
 //  - PROPOSITION (propose_criteria, propose_listing_actions, propose_add_listing, propose_contact_message,
 //    propose_contact_status, propose_visit) : n'ont AUCUN effet. Elles sont validées ici, puis renvoyées au
@@ -44,6 +45,12 @@ export const OUTILS_LECTURE = [
         source: { type: 'string', description: "Bien'ici, SeLoger, Leboncoin, PAP ou Manuel" },
         statut: { type: 'string', enum: ['non_ecartees', 'favoris', 'ecartees', 'a_contacter', 'contactees', 'toutes'], description: 'Défaut : non_ecartees' },
         inclure_rejetees: { type: 'boolean', description: 'Ajoute aussi celles exclues par ses filtres stricts (avec la raison)' },
+        nouvelles: { type: 'boolean', description: 'Seulement celles apparues depuis sa dernière visite sur le site' },
+        baisse_de_prix: { type: 'boolean', description: 'Seulement celles dont le prix a baissé' },
+        balcon: { type: 'boolean', description: 'Seulement avec balcon ou terrasse' },
+        ascenseur: { type: 'boolean', description: 'Seulement avec ascenseur (confirmé)' },
+        dpe_max: { type: 'string', enum: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], description: 'DPE au moins aussi bon que cette lettre (les DPE inconnus sont exclus)' },
+        etage_min: { type: 'integer', minimum: 0, maximum: 30 },
       },
     },
   },
@@ -69,8 +76,18 @@ export const OUTILS_LECTURE = [
   },
   {
     name: 'get_contact_board',
-    description: "Tableau de suivi des prises de contact : pour chaque annonce contactée, où en est-on, et quelles relances sont dues.",
+    description: "Tableau de suivi des prises de contact : pour chaque annonce contactée, où en est-on (en attente de réponse, réponse reçue, visite prévue…), quelles relances sont dues et quels sont les PROCHAINS RENDEZ-VOUS (visites à venir, triées par date). À utiliser pour « qui m'a répondu ? », « où en sont mes demandes ? », « c'est quand mes prochaines visites ? ». Le bot ne lit pas les vraies réponses : il ne connaît que le statut que Tabatha a noté.",
     input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_search_overview',
+    description: "Point d'étape global sur SA recherche : annonces suivies et valables, nouvelles depuis sa dernière visite, favoris (et ceux qui ont disparu), annonces écartées, suivi de contact par statut, relances dues, prochaines visites, les meilleures nouvelles annonces pas encore contactées, et une liste de « à faire ». À utiliser pour « où j'en suis ? », « que dois-je faire aujourd'hui ? », « quoi de neuf ? ».",
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'market_snapshot',
+    description: "Photo du marché locatif pour SON cas, calculée sur les annonces réellement suivies : combien d'annonces dans ses arrondissements pour sa surface minimum, loyers médians/quartiles et prix au m² (par nombre de pièces), part proche de son budget, comparaison avec les autres arrondissements, et dynamique récente (nouvelles annonces sur 7 jours vs 7 jours d'avant, annonces disparues, durée médiane en ligne, baisses de prix). ATTENTION : le collecteur ne suit que les annonces SOUS son budget actuel, donc les loyers sont tronqués par ce budget : cet outil décrit l'offre accessible avec son budget, PAS le niveau global du marché. À utiliser pour « où en est le marché ? », « est-ce qu'il y a beaucoup d'offres pour mon budget ? », « ça part vite ? ». Rappeler les limites données dans le champ limites.",
+    input_schema: { type: 'object', properties: { arrondissement: { type: 'integer', minimum: 1, maximum: 20, description: 'Optionnel : se concentrer sur un seul arrondissement (sinon : ses arrondissements choisis)' } } },
   },
 ];
 
@@ -198,6 +215,8 @@ const SYSTEM_STATIQUE = [
   "5. Vigilance : sur les annonces au prix très bas, sous-location, échange, « chambre », résidence étudiante, ou demandant de payer avant visite, alerte-la (assess_risk) sans être alarmiste : un signal n'est pas une preuve.",
   "6. Discrétion : ce chat est lu par Sacha (elle le sait). Si elle est sur le point de taper un numéro de téléphone, une adresse ou des infos de revenus, dis-lui de les mettre dans « Mon dossier » (elles restent sur son appareil) plutôt que dans le chat.",
   "7. Ne mentionne jamais les identifiants techniques (id, ref) dans tes réponses : parle de « l'annonce à 780 € rue X ».",
+  "8. Questions fréquentes → outil : « où j'en suis / quoi de neuf / que faire aujourd'hui » → get_search_overview ; « qui m'a répondu / où en sont mes demandes / mes prochains rendez-vous » → get_contact_board ; « où en est le marché / mon budget est-il réaliste / est-ce cher / ça part vite ? » → market_snapshot (rappelle toujours ses limites en une phrase, et ne parle pas de tendance sur un historique court) ; « nouvelles annonces », « baisses de prix », « avec balcon/ascenseur/bon DPE » → list_listings et ses filtres. Tu ne lis PAS ses messages ni ses e-mails : pour les réponses et rendez-vous, tu ne connais que ce qu'elle a noté dans le suivi ; dis-le si le suivi est vide ou semble périmé, et propose de le compléter.",
+  "9. Chiffres du marché : uniquement ceux fournis par market_snapshot, présentés comme « sur les annonces que je suis ». N'invente aucun loyer de référence, plafond d'encadrement ou statistique externe. Les données ne contiennent que les annonces sous son budget : ne dis jamais « le loyer moyen est X » ; dis « parmi les annonces à moins de N € que je suis… ».",
 ].join('\n');
 
 function systemComplet(criteres, maintenant) {
@@ -223,8 +242,12 @@ function construireContexte(donnees, maintenant) {
   const visibles = classees.filter((l) => estVisible(l, meta, maintenant));
   const ok = visibles.filter((l) => l.ok);
   const parId = new Map(classees.map((l) => [l.id, l]));
-  return { criteres, e, meta, classees, visibles, ok, parId, medianPpm: ctx.medianPpm, maintenant };
+  const vu = e.vuJusqua ? Date.parse(e.vuJusqua) : null;
+  return { criteres, e, meta, classees, visibles, ok, parId, medianPpm: ctx.medianPpm, maintenant, vu: Number.isFinite(vu) ? vu : null };
 }
+
+const estNouvelle = (l, c) => c.vu != null && l.first_seen && Date.parse(l.first_seen) > c.vu;
+const baisseDePrix = (l) => Array.isArray(l.price_history) && l.price_history.length > 1 && l.price_history.at(-1)[1] < l.price_history.at(-2)[1];
 
 function resume(l, c) {
   const verdict = l.ok ? verdictScore(l.rangOk, l.totalOk).label : null;
@@ -245,6 +268,8 @@ function resume(l, c) {
     statut: c.e.statut[l.id] ?? null,
     note: c.e.notes[l.id] ?? null,
     contact: contact ? { statut: contact.statut, relance: contact.relance ?? null, visite: contact.visite ?? null } : null,
+    nouvelle: estNouvelle(l, c) || undefined,
+    baisse_de_prix: baisseDePrix(l) || undefined,
     a_verifier: l.aVerifier?.length ? l.aVerifier : undefined,
     lien: l.url,
   };
@@ -272,6 +297,12 @@ function listListings(c, a) {
     if (a.surface_min != null && !(l.surface >= a.surface_min)) return false;
     if (a.pieces_min != null && !(l.rooms >= a.pieces_min)) return false;
     if (a.source && String(l.source).toLowerCase() !== String(a.source).toLowerCase()) return false;
+    if (a.nouvelles && !estNouvelle(l, c)) return false;
+    if (a.baisse_de_prix && !baisseDePrix(l)) return false;
+    if (a.balcon && !(l.features?.balcon || l.features?.terrasse)) return false;
+    if (a.ascenseur && l.elevator !== true) return false;
+    if (a.dpe_max && !(l.dpe && l.dpe <= String(a.dpe_max).toUpperCase())) return false;
+    if (a.etage_min != null && !(l.floor != null && l.floor >= a.etage_min)) return false;
     if (a.quartier && !String(quartierDe(l) ?? '').toLowerCase().includes(String(a.quartier).toLowerCase())) return false;
     return true;
   });
@@ -344,7 +375,7 @@ function explainFunnel(c) {
     raisons_des_rejets: Object.entries(raisons).sort((a, b) => b[1] - a[1]).map(([raison, nombre]) => ({ raison, nombre })),
     ce_qui_changerait: scenarios.sort((a, b) => b.annonces_en_plus - a.annonces_en_plus),
     criteres: { budgetMax: c.criteres.budgetMax, surfaceMin: c.criteres.surfaceMin, arrondissements: c.criteres.arrondissements, exclure: c.criteres.exclure },
-    note: 'Rappel : ne suggère d\'assouplir un critère que si elle le demande ; ce sont ses choix.',
+    note: 'Rappel : ne suggère d\'assouplir un critère que si elle le demande ; ce sont ses choix. Attention : le collecteur ne suit que les annonces sous son budget et au-dessus de sa surface minimum ; les scénarios « budget plus haut » ou « surface plus petite » ne voient donc que ce qui a déjà été collecté (un gain faible ou nul ne prouve pas qu\'il n\'y ait rien de plus cher ou de plus petit sur le marché).',
   };
 }
 
@@ -386,13 +417,134 @@ function assessRisk(c, a) {
   };
 }
 
+const STATUTS_FERMES = ['refuse', 'sans_suite'];
+
 function contactBoard(c) {
   const now = c.maintenant;
   const lignes = Object.entries(c.e.contacts).map(([id, k]) => {
     const l = c.parId.get(id);
-    return { annonce: l ? resume(l, c) : { id }, statut: k.statut, derniere_maj: k.maj ?? null, relance: k.relance ?? null, visite: k.visite ?? null, note: k.note ?? null, relance_due: Boolean(k.relance && new Date(k.relance).getTime() <= now && !['refuse', 'sans_suite', 'visite'].includes(k.statut)) };
+    return { annonce: l ? resume(l, c) : { id, note: 'annonce plus suivie' }, statut: k.statut, derniere_maj: k.maj ?? null, relance: k.relance ?? null, visite: k.visite ?? null, note: k.note ?? null, relance_due: Boolean(k.relance && new Date(k.relance).getTime() <= now && !['reponse', 'refuse', 'sans_suite', 'visite'].includes(k.statut)) };
   });
-  return { total: lignes.length, relances_dues: lignes.filter((x) => x.relance_due).length, suivi: lignes };
+  const avecVisite = lignes.filter((x) => x.visite && !STATUTS_FERMES.includes(x.statut));
+  const parDate = (a, b) => new Date(a.visite) - new Date(b.visite);
+  return {
+    total: lignes.length,
+    en_attente_de_reponse: lignes.filter((x) => x.statut === 'contacte').length,
+    reponses_recues: lignes.filter((x) => x.statut === 'reponse').length,
+    relances_dues: lignes.filter((x) => x.relance_due).length,
+    prochaines_visites: avecVisite.filter((x) => new Date(x.visite).getTime() >= now).sort(parDate),
+    visites_passees: avecVisite.filter((x) => new Date(x.visite).getTime() < now).sort(parDate).slice(-5),
+    suivi: lignes,
+    note: "Ces statuts sont ceux que Tabatha a notés : tu ne lis pas ses messages ni ses e-mails. Si un statut semble périmé, dis-le et propose de le mettre à jour (propose_contact_status).",
+  };
+}
+
+function searchOverview(c) {
+  const now = c.maintenant;
+  const idsVisibles = new Set(c.visibles.map((l) => l.id));
+  const statut = c.e.statut;
+  const enLigne = (l) => idsVisibles.has(l.id);
+  const favorisIds = Object.keys(statut).filter((id) => statut[id] === 'fav' && c.parId.has(id));
+  const disparus = favorisIds.filter((id) => !idsVisibles.has(id)).map((id) => resume(c.parId.get(id), c));
+  const board = contactBoard(c);
+  const nonEcartees = c.ok.filter((l) => statut[l.id] !== 'ecarte');
+  const nouvelles = nonEcartees.filter((l) => estNouvelle(l, c));
+  const pasContactees = (l) => !c.e.contacts[l.id];
+  const par = {};
+  for (const k of Object.values(c.e.contacts)) par[k.statut] = (par[k.statut] ?? 0) + 1;
+  const visitesProches = board.prochaines_visites.filter((v) => new Date(v.visite).getTime() - now < 3 * 864e5);
+  const aFaire = [];
+  if (board.relances_dues) aFaire.push(`${board.relances_dues} relance(s) à envoyer`);
+  if (visitesProches.length) aFaire.push(`${visitesProches.length} visite(s) dans les 3 prochains jours`);
+  if (board.reponses_recues) aFaire.push(`${board.reponses_recues} réponse(s) reçue(s) : faire suivre (visite à fixer ou refus à noter)`);
+  if (disparus.length) aFaire.push(`${disparus.length} favori(s) ne sont plus en ligne`);
+  const favPasContactes = favorisIds.filter((id) => idsVisibles.has(id) && !c.e.contacts[id]).length;
+  if (favPasContactes) aFaire.push(`${favPasContactes} favori(s) pas encore contacté(s)`);
+  if (nouvelles.length) aFaire.push(`${nouvelles.length} nouvelle(s) annonce(s) à regarder depuis sa dernière visite`);
+  return {
+    donnees_du: c.meta.lastFullAt ?? c.meta.generatedAt ?? null,
+    criteres: { budgetMax: c.criteres.budgetMax, surfaceMin: c.criteres.surfaceMin, arrondissements: c.criteres.arrondissements, exclure: c.criteres.exclure },
+    annonces_suivies: c.visibles.length,
+    passent_ses_filtres: c.ok.length,
+    nouvelles_depuis_sa_derniere_visite: nouvelles.length,
+    favoris: favorisIds.length,
+    favoris_disparus: disparus,
+    ecartees: Object.values(statut).filter((v) => v === 'ecarte').length,
+    suivi_de_contact: { total: board.total, par_statut: par, relances_dues: board.relances_dues },
+    prochaines_visites: board.prochaines_visites.slice(0, 5),
+    meilleures_nouvelles_pas_contactees: nouvelles.filter(pasContactees).sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 3).map((l) => resume(l, c)),
+    meilleures_annonces_pas_contactees: nonEcartees.filter((l) => pasContactees(l) && enLigne(l)).sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 3).map((l) => resume(l, c)),
+    a_faire: aFaire,
+  };
+}
+
+const quantile = (arr, q) => {
+  if (!arr.length) return null;
+  const t = [...arr].sort((a, b) => a - b);
+  const pos = (t.length - 1) * q;
+  const lo = Math.floor(pos), hi = Math.ceil(pos);
+  return t[lo] + (t[hi] - t[lo]) * (pos - lo);
+};
+const arrondi = (n, d = 0) => (n == null ? null : Math.round(n * 10 ** d) / 10 ** d);
+const statsLoyers = (ls) => {
+  const prix = ls.map((l) => l.price).filter(Number.isFinite);
+  const ppm = ls.filter((l) => Number.isFinite(l.price) && l.surface > 0).map((l) => l.price / l.surface);
+  return { annonces: ls.length, loyer_median: arrondi(quantile(prix, 0.5)), loyer_q1: arrondi(quantile(prix, 0.25)), loyer_q3: arrondi(quantile(prix, 0.75)), loyer_min: prix.length ? Math.min(...prix) : null, loyer_max: prix.length ? Math.max(...prix) : null, prix_m2_median: arrondi(quantile(ppm, 0.5), 1) };
+};
+const dateAnnonce = (l) => {
+  const t = Date.parse(l.publishedAt);
+  return Number.isFinite(t) && t > Date.parse('2000-01-01') ? t : Date.parse(l.first_seen);
+};
+
+function marketSnapshot(c, a) {
+  const now = c.maintenant;
+  const crit = c.criteres;
+  const plafond = crit.budgetMax;
+  const arrs = a.arrondissement ? [Number(a.arrondissement)] : crit.arrondissements;
+  const dansSecteur = (l) => !arrs.length || arrs.includes(l.arrondissement);
+  // Le collecteur ne remonte que ce qui est sous le budget et au-dessus de la surface minimum : au-delà,
+  // les annonces encore présentes sont des restes d'un budget précédent (elles disparaîtront), on les ignore.
+  const dansLePerimetreCollecte = (l) => l.price != null && l.price <= plafond && (l.surface == null || l.surface >= crit.surfaceMin);
+  const stock = c.visibles.filter(dansLePerimetreCollecte);
+  const secteur = stock.filter(dansSecteur);
+  const proches = secteur.filter((l) => l.price >= 0.9 * plafond);
+  const parPieces = ['1', '2', '3+'].map((k) => {
+    const ls = secteur.filter((l) => (k === '3+' ? l.rooms >= 3 : l.rooms === Number(k)));
+    return { pieces: k, ...statsLoyers(ls) };
+  }).filter((x) => x.annonces > 0);
+  const parArr = {};
+  for (const l of stock) if (l.arrondissement) (parArr[l.arrondissement] ??= []).push(l);
+  const autres = Object.entries(parArr).filter(([, ls]) => ls.length >= 5).map(([arr, ls]) => ({ arrondissement: Number(arr), ...statsLoyers(ls) })).sort((x, y) => y.annonces - x.annonces).slice(0, 10);
+  // Dynamique : uniquement les sources collectées automatiquement (les annonces « Manuel » n'ont pas de date fiable de mise en ligne / retrait).
+  const auto = c.classees.filter((l) => l.source !== 'Manuel' && !l.dupOf && dansLePerimetreCollecte(l) && dansSecteur(l));
+  const j7 = now - 7 * 864e5, j14 = now - 14 * 864e5;
+  const nouv7 = auto.filter((l) => dateAnnonce(l) > j7).length;
+  const nouvPrec = auto.filter((l) => dateAnnonce(l) > j14 && dateAnnonce(l) <= j7).length;
+  const disparues = auto.filter((l) => !estVisible(l, c.meta, now) && !l.retire);
+  const disp7 = disparues.filter((l) => Date.parse(l.last_seen) > j7).length;
+  const durees = disparues.map((l) => (Date.parse(l.last_seen) - dateAnnonce(l)) / 864e5).filter((d) => d >= 0 && d < 90);
+  const debut = c.classees.map((l) => Date.parse(l.first_seen)).filter(Number.isFinite).reduce((m, t) => Math.min(m, t), Infinity);
+  return {
+    perimetre: { arrondissements: arrs.length ? arrs : 'tout Paris', surface_min: crit.surfaceMin, budget_max: plafond },
+    donnees_du: c.meta.lastFullAt ?? c.meta.generatedAt ?? null,
+    historique_depuis: Number.isFinite(debut) ? new Date(debut).toISOString().slice(0, 10) : null,
+    offre_sous_ton_budget_dans_ton_secteur: { ...statsLoyers(secteur), proches_du_plafond_90pct: proches.length },
+    par_nombre_de_pieces: parPieces,
+    autres_arrondissements_les_plus_fournis: autres,
+    dynamique: {
+      nouvelles_annonces_7j: nouv7,
+      nouvelles_annonces_7j_precedents: nouvPrec,
+      annonces_disparues_7j: disp7,
+      duree_mediane_en_ligne_jours_des_disparues: durees.length >= 5 ? arrondi(quantile(durees, 0.5), 1) : null,
+      annonces_avec_baisse_de_prix: secteur.filter(baisseDePrix).length,
+    },
+    limites: [
+      `TRONQUÉ : seules les annonces à ${plafond} € ou moins (et d'au moins ${crit.surfaceMin} m²) sont collectées. Les loyers médians décrivent l'offre accessible avec son budget, pas le marché entier : ne dis JAMAIS « le loyer moyen à Paris/dans le 18e est X ». Pour voir le haut du marché, il faudrait élargir la collecte (décision de Sacha).`,
+      "Échantillon = annonces suivies par ce site (Bien'ici + alertes e-mail + ajouts manuels), pas tout le marché ; ce sont des loyers DEMANDÉS, charges comprises, pas des baux signés.",
+      "« Disparue » = plus en ligne, pas forcément louée. Peu de recul si l'historique est court : ne parle pas de « tendance » sur quelques jours.",
+      "Paris applique l'encadrement des loyers : les loyers de référence officiels ne sont PAS dans ces données, ne cite aucun plafond chiffré et renvoie vers le simulateur officiel de la Ville de Paris.",
+    ],
+  };
 }
 
 // --- Outils de proposition : validation puis mise en forme pour le navigateur -----------------------------
@@ -563,6 +715,8 @@ export async function executerAgent({ message, history = [], criteresClient = {}
           else if (u.name === 'explain_funnel') res = explainFunnel(c);
           else if (u.name === 'assess_risk') res = assessRisk(c, u.input ?? {});
           else if (u.name === 'get_contact_board') res = contactBoard(c);
+          else if (u.name === 'get_search_overview') res = searchOverview(c);
+          else if (u.name === 'market_snapshot') res = marketSnapshot(c, u.input ?? {});
           else {
             const r = proposer(c, u.name, u.input ?? {}, sortie);
             res = r.ok ? MSG_PROPOSITION : { erreur: r.erreur };

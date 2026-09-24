@@ -151,7 +151,7 @@ Le chat de l'appli (`worker/src/agent.mjs`, branché dans `worker/src/index.mjs`
 générateur de critères. Détail et coûts : README.md § « L'agent du chat ». À retenir avant de le modifier :
 
 - **Le bot ne modifie jamais rien seul.** Outils de lecture (`list_listings`, `get_listing`, `compare_listings`,
-  `explain_funnel`, `assess_risk`, `get_contact_board`) exécutés côté Worker ; outils `propose_*` = simples propositions
+  `explain_funnel`, `assess_risk`, `get_contact_board`, `get_search_overview`, `market_snapshot`) exécutés côté Worker ; outils `propose_*` = simples propositions
   validées côté serveur, que Tabatha applique d'un tap dans le navigateur. Ne jamais ajouter un outil qui écrit dans
   `etat.json`/`criteria.json` sans validation de sa part.
 - **Prise de contact = brouillon + copie + « J'ai envoyé ✔ »**, jamais d'envoi automatique (captcha/connexion, règles non

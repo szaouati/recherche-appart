@@ -89,7 +89,10 @@ Le chat n'est plus un simple « ajuste mes critères » : `worker/src/agent.mjs`
 
 - **Lecture** (exécutés côté Worker, sans effet) : `list_listings`, `get_listing`, `compare_listings`, `explain_funnel`
   (pourquoi si peu d'annonces + scénarios « et si »), `assess_risk` (signaux d'arnaque, jamais une accusation),
-  `get_contact_board`. Les annonces ne sont chargées que si un de ces outils est appelé.
+  `get_contact_board` (suivi, relances, prochains rendez-vous), `get_search_overview` (« où j'en suis », « à faire »),
+  `market_snapshot` (offre et dynamique du marché pour son cas). **Limite structurelle** : le collecteur ne suit que les
+  annonces sous le budget et au-dessus de la surface minimum ; `market_snapshot` décrit donc l'offre accessible avec
+  son budget (loyers tronqués), pas le marché entier — élargir la collecte au-dessus du budget serait nécessaire pour un vrai état du marché. Les annonces ne sont chargées que si un de ces outils est appelé.
 - **Proposition** (aucun effet, validés côté serveur puis renvoyés au navigateur dans `propositions[]`) : `propose_criteria`,
   `propose_listing_actions` (♥/✕/note), `propose_add_listing`, `propose_contact_message`, `propose_contact_status`,
   `propose_visit`. **Le bot ne modifie jamais rien seul** : chaque proposition s'affiche sous forme de carte que Tabatha

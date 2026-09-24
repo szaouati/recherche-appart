@@ -299,3 +299,117 @@ test('creerAppelAnthropic : un modèle refusé (404) bascule sur le modèle de s
   await assert.rejects(creerAppelAnthropic({ ANTHROPIC_API_KEY: 'k' }, fetch429)({ system: [], messages: [], tools: [] }), /429/);
   assert.equal(essais.length, 1);
 });
+
+// ---- Points d'étape, agenda et marché ------------------------------------------------------------------
+const jour = (d) => `2026-09-${d}T00:00:00Z`;
+const ann = (id, o) => annonce(id, { publishedAt: jour('20'), ...o });
+const DONNEES_MARCHE = {
+  listings: [
+    ann('m1', { price: 700, surface: 20, rooms: 1, publishedAt: jour('22'), price_history: [[jour('22'), 750], [jour('23'), 700]] }),
+    ann('m2', { price: 900, surface: 25, rooms: 1, publishedAt: jour('20') }),
+    ann('m3', { price: 1300, surface: 40, rooms: 2, publishedAt: jour('15') }),
+    ...['g1', 'g2', 'g3', 'g4', 'g5'].map((id) => ann(id, { price: 800, publishedAt: jour('10'), first_seen: jour('10'), last_seen: jour('18') })),
+    ...['o1', 'o2', 'o3', 'o4', 'o5', 'o6'].map((id) => ann(id, { price: 800, surface: 20, arrondissement: 11 })),
+  ],
+  meta: META,
+  etat: {
+    statut: { g1: 'fav', m2: 'fav', m3: 'ecarte' },
+    notes: {},
+    manuel: [],
+    vuJusqua: '2026-09-23T00:00:00Z',
+    contacts: {
+      m2: { statut: 'contacte', maj: jour('21'), relance: jour('23') },
+      m1: { statut: 'reponse', maj: jour('23'), relance: null },
+      o1: { statut: 'visite', maj: jour('23'), visite: '2026-09-26T16:00:00Z' },
+      o2: { statut: 'visite', maj: jour('20'), visite: '2026-09-22T10:00:00Z' },
+      o3: { statut: 'refuse', maj: jour('20'), visite: '2026-09-30T10:00:00Z' },
+    },
+  },
+  criteria: CRITERIA,
+};
+
+test('get_contact_board : prochaines visites triées, visites passées et refus à part, décompte des statuts', async () => {
+  const a = agent([[outil('get_contact_board', {})], texteFinal('ok')], { donnees: DONNEES_MARCHE });
+  await a.lancer('C\'est quand mes prochains rendez-vous ?');
+  const [b] = dernierResultat(a.modele.appels[1].messages);
+  assert.deepEqual(b.prochaines_visites.map((v) => v.annonce.id), ['o1'], 'seule la visite à venir et non refusée');
+  assert.deepEqual(b.visites_passees.map((v) => v.annonce.id), ['o2']);
+  assert.equal(b.en_attente_de_reponse, 1);
+  assert.equal(b.reponses_recues, 1);
+  assert.equal(b.relances_dues, 1);
+  assert.match(b.note, /ne lis pas/);
+});
+
+test('get_search_overview : nouvelles depuis la dernière visite, favoris disparus, liste « à faire »', async () => {
+  const a = agent([[outil('get_search_overview', {})], texteFinal('ok')], { donnees: DONNEES_MARCHE });
+  await a.lancer('Où j\'en suis ?');
+  const [o] = dernierResultat(a.modele.appels[1].messages);
+  assert.equal(o.favoris, 2);
+  assert.deepEqual(o.favoris_disparus.map((f) => f.id), ['g1'], 'g1 n\'est plus en ligne');
+  assert.equal(o.ecartees, 1);
+  assert.equal(o.suivi_de_contact.total, 5);
+  assert.equal(o.prochaines_visites[0].annonce.id, 'o1');
+  assert.ok(o.nouvelles_depuis_sa_derniere_visite >= 1, 'les annonces vues pour la première fois le 24 sont nouvelles');
+  const faire = o.a_faire.join(' | ');
+  assert.match(faire, /relance/);
+  assert.match(faire, /visite/);
+  assert.match(faire, /ne sont plus en ligne/);
+  assert.match(faire, /réponse/);
+});
+
+test('market_snapshot : offre sous le budget (échantillon tronqué), dynamique et limites', async () => {
+  const a = agent([[outil('market_snapshot', {})], texteFinal('ok')], { donnees: DONNEES_MARCHE });
+  await a.lancer('Où en est le marché ?');
+  const [m] = dernierResultat(a.modele.appels[1].messages);
+  // Secteur = 18e, ≥ 10 m², ≤ 900 € (budget), en ligne : m1 (700) et m2 (900). m3 (1300) est au-dessus du plafond de collecte : ignoré.
+  const s = m.offre_sous_ton_budget_dans_ton_secteur;
+  assert.equal(s.annonces, 2);
+  assert.equal(s.loyer_median, 800);
+  assert.equal(s.loyer_q1, 750);
+  assert.equal(s.loyer_q3, 850);
+  assert.equal(s.prix_m2_median, 35.5);
+  assert.equal(s.proches_du_plafond_90pct, 1, 'm2 à 900 € est proche du plafond');
+  assert.deepEqual(m.par_nombre_de_pieces.map((x) => [x.pieces, x.annonces]), [['1', 2]]);
+  assert.deepEqual(m.autres_arrondissements_les_plus_fournis.map((x) => x.arrondissement), [11], 'seuls les arrondissements avec au moins 5 annonces');
+  assert.equal(m.dynamique.nouvelles_annonces_7j, 2);
+  assert.equal(m.dynamique.nouvelles_annonces_7j_precedents, 0, 'm3 (1300 €) est hors périmètre de collecte');
+  assert.equal(m.dynamique.annonces_disparues_7j, 5);
+  assert.equal(m.dynamique.duree_mediane_en_ligne_jours_des_disparues, 8);
+  assert.equal(m.dynamique.annonces_avec_baisse_de_prix, 1);
+  assert.ok(m.limites.some((l) => /TRONQUÉ/.test(l) && /900 €/.test(l)));
+  assert.ok(m.limites.some((l) => /loyers DEMANDÉS/.test(l)));
+  assert.ok(m.limites.some((l) => /encadrement/.test(l)));
+});
+
+test('market_snapshot : peut viser un seul arrondissement', async () => {
+  const a = agent([[outil('market_snapshot', { arrondissement: 11 })], texteFinal('ok')], { donnees: DONNEES_MARCHE });
+  await a.lancer();
+  const [m] = dernierResultat(a.modele.appels[1].messages);
+  assert.deepEqual(m.perimetre.arrondissements, [11]);
+  assert.equal(m.offre_sous_ton_budget_dans_ton_secteur.annonces, 6);
+  assert.equal(m.offre_sous_ton_budget_dans_ton_secteur.loyer_median, 800);
+});
+
+test('list_listings : filtres nouvelles / baisse de prix / balcon / DPE / étage', async () => {
+  const donnees = {
+    ...DONNEES_MARCHE,
+    listings: [
+      ann('n1', { price: 800, first_seen: '2026-09-24T08:00:00Z', features: { balcon: true }, dpe: 'C', floor: 4, elevator: true }),
+      ann('n2', { price: 800, first_seen: '2026-09-10T08:00:00Z', dpe: 'E', floor: 1 }),
+      ann('n3', { price: 700, floor: 1, first_seen: '2026-09-10T08:00:00Z', price_history: [[jour('10'), 750], [jour('12'), 700]], dpe: null }),
+    ],
+    etat: { ...DONNEES_MARCHE.etat, statut: {}, contacts: {} },
+  };
+  const a = agent([[
+    outil('list_listings', { nouvelles: true }, 't1'), outil('list_listings', { baisse_de_prix: true }, 't2'),
+    outil('list_listings', { balcon: true, ascenseur: true }, 't3'), outil('list_listings', { dpe_max: 'D' }, 't4'), outil('list_listings', { etage_min: 3 }, 't5'),
+  ], texteFinal('ok')], { donnees });
+  await a.lancer();
+  const ids = dernierResultat(a.modele.appels[1].messages).map((r) => r.annonces.map((x) => x.id).sort());
+  assert.deepEqual(ids, [['n1'], ['n3'], ['n1'], ['n1'], ['n1']]);
+});
+
+test('outils de lecture : get_search_overview et market_snapshot sont déclarés et jamais des propositions', () => {
+  const noms = OUTILS_LECTURE.map((o) => o.name);
+  assert.ok(noms.includes('get_search_overview') && noms.includes('market_snapshot'));
+});
