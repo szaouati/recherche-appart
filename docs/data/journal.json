@@ -2298,6 +2298,52 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:45:11.024Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Est-ce que les annonces partent vite ?",
+      "reply": "Pas vraiment de signe d'annonces qui s'arrachent, sur les 7 derniers jours :\n\n- **3** nouvelles annonces suivies dans le 18e (contre **6** la semaine précédente)\n- **0** annonce disparue et **0** baisse de prix récente\n\nDonc rien qui indique un marché qui « part vite » en ce moment sur ton secteur — mais attention, c'est un historique très court (une dizaine de jours), donc pas de vraie tendance à en tirer 🙂\n\nPetit rappel sur ces chiffres : ils ne portent que sur les annonces à moins de **900 €** que je suis dans le 18e (pas tout le marché parisien), et « disparue » ne veut pas forcément dire louée.\n\nTu veux que je regarde si de nouvelles annonces intéressantes sont arrivées cette semaine ?",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "market_snapshot"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
