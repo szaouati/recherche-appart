@@ -3,6 +3,25 @@
   "notes": {},
   "manuel": [
     {
+      "id": "manuel:1790242242821-vlym",
+      "source": "Manuel",
+      "url": "https://www.pap.fr/annonces/-r465400898",
+      "title": "PAP — 641€, 10m², studio — alerte e-mail du 24/09 (étage et DPE non indiqués)",
+      "price": 641,
+      "surface": 10,
+      "rooms": 1,
+      "arrondissement": 18,
+      "floor": null,
+      "elevator": null,
+      "dpe": null,
+      "furnished": null,
+      "features": {},
+      "first_seen": "2026-09-24T09:30:42.821Z",
+      "last_seen": "2026-09-24T09:30:42.821Z",
+      "publishedAt": "2026-09-24T09:30:42.821Z",
+      "photo": null
+    },
+    {
       "id": "manuel:1790233644777",
       "source": "Manuel",
       "url": "https://www.seloger.com/annonce/location/ile-de-france/paris-75/paris-75000/26EFZEE7G3EL",
@@ -462,5 +481,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T09:26:26.891Z"
+  "updatedAt": "2026-09-24T09:30:43.070Z"
 }
