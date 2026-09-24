@@ -404,25 +404,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790178230356",
-      "source": "Manuel",
-      "url": "https://www.leboncoin.fr/ad/locations/3272578697",
-      "title": "Leboncoin (recherche) — 820€, 25m², 1p — Simplon-Poissonniers",
-      "price": 820,
-      "surface": 25,
-      "rooms": 1,
-      "arrondissement": 18,
-      "floor": 4,
-      "elevator": null,
-      "dpe": "D",
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-23T15:43:50.356Z",
-      "last_seen": "2026-09-23T15:43:50.356Z",
-      "publishedAt": "2026-09-23T15:43:50.356Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790178227304",
       "source": "Manuel",
       "url": "https://www.leboncoin.fr/ad/locations/3273906427",
@@ -538,5 +519,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T09:26:20.587Z"
+  "updatedAt": "2026-09-24T09:26:22.164Z"
 }
