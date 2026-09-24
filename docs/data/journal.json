@@ -2022,6 +2022,50 @@
         "alerteActive": true,
         "alerteScoreMin": 45
       }
+    },
+    {
+      "ts": "2026-09-24T23:49:41.418Z",
+      "kind": "chat",
+      "message": "Dis à Sacha que je veux pouvoir envoyer un message à tous les apparts que je préfères (que je sélectionne), donc il faut que je puisse déposer mon dossier ici quelque part, puis il faut que je puisse vérifier qui répond en tant réel : il faut m’expliquer comment je fais ça…",
+      "reply": "Coucou ! Je précise juste : je ne peux pas transmettre de message à Sacha, je suis là uniquement pour t'aider sur ta recherche d'appart 🙂 Mais je peux t'expliquer comment faire ce que tu veux avec les outils existants :\n\n**1. Déposer ton dossier**\nTes infos personnelles (situation, téléphone, disponibilités) se remplissent dans **« Mon dossier »**, directement dans l'app — pas ici dans le chat, pour rester discret. Une fois rempli, je peux m'en servir pour rédiger tes messages de contact (avec les marqueurs {{prenom}}, {{situation}}, {{telephone}}, {{disponibilites}}) sans que tu aies à retaper ton numéro à chaque fois.\n\n**2. Envoyer un message à plusieurs annonces favorites**\nJe ne peux pas faire un envoi groupé automatique (chaque message doit être relu et envoyé par toi), mais on peut aller vite :\n- Dis-moi quelles annonces tu préfères (ou mets-les en favori, je peux te proposer ça)\n- Pour chacune, je te rédige un message prêt à copier-coller, tu le relis et l'envoies toi-même\n\n**3. Suivre qui répond**\nJe ne lis pas tes messages ni tes mails. Donc après chaque envoi, tu me dis où ça en est (« réponse reçue », « visite prévue »…) et je le note dans le suivi via le statut de contact. Ensuite tu peux me demander à tout moment « qui m'a répondu ? » ou « mes prochains rendez-vous ? » et je te fais le point avec le tableau de suivi.\n\nTu veux qu'on commence ? Dis-moi quelles annonces tu veux mettre en favori et contacter, je te prépare ça 😊",
+      "proposal": null,
+      "propositions": [],
+      "outils": [],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
