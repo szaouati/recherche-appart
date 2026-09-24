@@ -442,25 +442,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790178218038",
-      "source": "Manuel",
-      "url": "https://www.leboncoin.fr/ad/locations/3272721857",
-      "title": "Leboncoin (recherche) — 430€, 24m², 1p — Grandes Carrières",
-      "price": 430,
-      "surface": 24,
-      "rooms": 1,
-      "arrondissement": 18,
-      "floor": 2,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-23T15:43:38.038Z",
-      "last_seen": "2026-09-23T15:43:38.038Z",
-      "publishedAt": "2026-09-23T15:43:38.038Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790178011317",
       "source": "Manuel",
       "url": "https://www.pap.fr/annonces/appartement-paris-18e-75018-r465301195",
@@ -500,5 +481,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T09:26:23.759Z"
+  "updatedAt": "2026-09-24T09:26:25.319Z"
 }
