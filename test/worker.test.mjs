@@ -228,6 +228,18 @@ test('set_contact : un statut inconnu vaut « retirer » ; une visite fixe la da
   assert.equal(r2.body.contacts.a, undefined);
 });
 
+test('set_contact : relance_jours null/absent ne crée pas de relance à demain ; une réponse reçue efface la relance', async () => {
+  const env = creerEnvDeTest();
+  env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });
+  const r0 = await env.post({ kind: 'etat', action: 'set_contact', id: 'a', statut: 'a_contacter', relance_jours: null, criteria: {} });
+  assert.equal(r0.body.contacts.a.relance, null, 'null ne doit pas être borné à 1 jour');
+  await env.post({ kind: 'etat', action: 'set_contact', id: 'a', statut: 'contacte', relance_jours: 3, criteria: {} });
+  const r1 = await env.post({ kind: 'etat', action: 'set_contact', id: 'a', statut: 'contacte', criteria: {} });
+  assert.ok(r1.body.contacts.a.relance, 'sans relance_jours, l\'ancienne relance est conservée');
+  const r2 = await env.post({ kind: 'etat', action: 'set_contact', id: 'a', statut: 'reponse', relance_jours: null, criteria: {} });
+  assert.equal(r2.body.contacts.a.relance, null, 'une réponse reçue efface la relance');
+});
+
 // ---- Chat de bout en bout -------------------------------------------------------------------------------
 test('chat : requête → agent (outil de lecture puis réponse) → journal ; propositions renvoyées au navigateur', async () => {
   const env = creerEnvDeTest();

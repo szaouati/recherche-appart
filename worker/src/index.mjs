@@ -280,7 +280,7 @@ export default {
           if (!id) return json({ error: 'id manquant' }, 400, headers);
           const statut = STATUTS_CONTACT.includes(body.statut) ? body.statut : null;
           const note = String(body.note ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
-          const jours = Number.isFinite(Number(body.relance_jours)) ? Math.min(30, Math.max(1, Math.round(Number(body.relance_jours)))) : null;
+          const jours = body.relance_jours != null && body.relance_jours !== '' && Number(body.relance_jours) >= 1 ? Math.min(30, Math.round(Number(body.relance_jours))) : null; // null/0/absent = pas de nouvelle relance (Number(null) vaut 0 : ne pas le borner à 1 jour)
           const visite = Number.isFinite(Date.parse(body.visite)) ? new Date(body.visite).toISOString() : null;
           const canal = ['messagerie_annonce', 'email', 'sms', 'telephone'].includes(body.canal) ? body.canal : null;
           etat = await ecrireEtatMute(env, (e) => {
@@ -290,7 +290,7 @@ export default {
               ...avant,
               statut,
               maj: new Date().toISOString(),
-              relance: jours ? new Date(Date.now() + jours * 864e5).toISOString() : (['refuse', 'sans_suite', 'visite'].includes(statut) ? null : avant.relance ?? null),
+              relance: jours ? new Date(Date.now() + jours * 864e5).toISOString() : (['reponse', 'refuse', 'sans_suite', 'visite'].includes(statut) ? null : avant.relance ?? null),
               ...(visite ? { visite } : {}),
               ...(note ? { note } : {}),
               ...(canal ? { canal } : {}),

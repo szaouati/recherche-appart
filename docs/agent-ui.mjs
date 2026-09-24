@@ -72,10 +72,10 @@ export function construireIcs(v, maintenant = new Date()) {
   return lignes.join('\r\n') + '\r\n';
 }
 
-/** Une relance est due si sa date est passée et que l'annonce n'est plus en cours de discussion. */
+/** Une relance est due si sa date est passée et que on attend encore une réponse (pas de réponse reçue, ni refus, ni visite fixée). */
 export function relanceDue(contact, maintenant = Date.now()) {
   if (!contact?.relance) return false;
-  if (['refuse', 'sans_suite', 'visite'].includes(contact.statut)) return false;
+  if (['reponse', 'refuse', 'sans_suite', 'visite'].includes(contact.statut)) return false;
   return new Date(contact.relance).getTime() <= maintenant;
 }
 

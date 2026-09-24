@@ -27,7 +27,7 @@ que de cache d'appoint par appareil (clés `*Cache`), jamais de source de vérit
 | Fichier | Contenu | Écrit par |
 |---|---|---|
 | `docs/criteria.json` | Critères de recherche actuels, **partagés** (source de vérité pour le bot ET pour le site) | Le Worker uniquement, via `POST /etat {action:'set_criteria'}` — plus jamais par le navigateur directement |
-| `docs/data/etat.json` | **État partagé** : favoris/écartés (`statut`), notes, annonces ajoutées à la main (`manuel`), dernière visite (`vuJusqua`) | Le Worker uniquement, via `POST /etat` |
+| `docs/data/etat.json` | **État partagé** : favoris/écartés (`statut`), notes, annonces ajoutées à la main (`manuel`), suivi de contact (`contacts`), dernière visite (`vuJusqua`) | Le Worker uniquement, via `POST /etat` |
 | `docs/data/listings.json` | Annonces collectées + score, ~toutes les 30 min | `collector/collect.mjs` (Actions) |
 | `docs/data/journal.json` | **Journal partagé** (historique, append-only) : chaque échange avec le bot dans l'appli, et chaque action notable (♥ garder, ✕ écarter, note personnelle, changement de critères, ajout manuel, 👍/👎 à la mascotte) | Le Worker (`worker/src/index.mjs`), en tâche de fond, à chaque interaction |
 | `docs/app.js` / `docs/score.mjs` | Classement + libellés (`verdictScore`, pas de note brute affichée) | — |
@@ -144,6 +144,27 @@ pièces* · étage`, une ligne de détails (`🤍`/`🤎`/`🌿`/`🆕` : meubl�
 `🐾 *Faut prendre l'appli*` + l'URL en clair (WhatsApp ne rend PAS les liens markdown `[texte](url)`), puis
 `🐈‍⬛ ♥ 🍫🐱💛`. Pièges WhatsApp : ne jamais mettre de retour à la ligne à l'intérieur d'un `*gras*` ; un lien par ligne.
 
+
+## Runbook — l'agent du chat (ajouté le 24/09/2026)
+
+Le chat de l'appli (`worker/src/agent.mjs`, branché dans `worker/src/index.mjs`) est un **agent à outils**, pas un simple
+générateur de critères. Détail et coûts : README.md § « L'agent du chat ». À retenir avant de le modifier :
+
+- **Le bot ne modifie jamais rien seul.** Outils de lecture (`list_listings`, `get_listing`, `compare_listings`,
+  `explain_funnel`, `assess_risk`, `get_contact_board`) exécutés côté Worker ; outils `propose_*` = simples propositions
+  validées côté serveur, que Tabatha applique d'un tap dans le navigateur. Ne jamais ajouter un outil qui écrit dans
+  `etat.json`/`criteria.json` sans validation de sa part.
+- **Prise de contact = brouillon + copie + « J'ai envoyé ✔ »**, jamais d'envoi automatique (captcha/connexion, règles non
+  négociables). Les brouillons n'utilisent que les marqueurs `{{prenom}} {{situation}} {{telephone}} {{disponibilites}}`.
+- **« 👤 Mon dossier » est local à l'appareil** (localStorage `dossier`) : jamais envoyé au Worker, au journal ni au dépôt
+  (public). Le journal `contact` ne stocke que id + statut. Ne jamais faire transiter ces infos par le Worker.
+- **Suivi de contact partagé** : `etat.json` → `contacts[id] = {statut, maj, relance, visite, note, canal}` (action
+  `set_contact`). Statuts : `a_contacter, contacte, reponse, visite, refuse, sans_suite`. Une relance (+3 j après « contacté »)
+  alimente le bandeau « ⏰ relances » ; `reponse/refuse/sans_suite/visite` l'effacent. « Livraison du matin » : ne pas perdre
+  les `contacts` en réécrivant `etat.json`, et les nettoyer avec `supprimer_manuel` d'une annonce retirée si besoin.
+- **Vérifier l'agent avec le vrai modèle après tout redéploiement** (`cd worker && npx wrangler deploy`, fait par Sacha) : les
+  tests utilisent un faux modèle. Essais types : « pourquoi si peu d'annonces ? », « garde mes 2 meilleures », « rédige un
+  message pour cette annonce », « compare les 3 moins chères », « est-ce une arnaque ? ».
 
 ## Règles non négociables
 

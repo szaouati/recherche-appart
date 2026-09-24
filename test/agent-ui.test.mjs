@@ -39,6 +39,7 @@ test('relances : due seulement si la date est passée et le dossier encore actif
   assert.equal(relanceDue({ statut: 'contacte', relance: '2026-09-25T12:00:00Z' }, now), false);
   assert.equal(relanceDue({ statut: 'refuse', relance: '2026-09-20T12:00:00Z' }, now), false);
   assert.equal(relanceDue({ statut: 'visite', relance: '2026-09-20T12:00:00Z' }, now), false);
+  assert.equal(relanceDue({ statut: 'reponse', relance: '2026-09-20T12:00:00Z' }, now), false, 'une réponse est arrivée : rien à relancer');
   assert.equal(relanceDue(undefined, now), false);
   assert.equal(libelleRelance({ relance: '2026-09-25T10:00:00Z' }, now), 'relance demain');
   assert.equal(libelleRelance({ relance: '2026-09-28T12:00:00Z' }, now), 'relance dans 4 j');

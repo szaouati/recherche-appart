@@ -83,7 +83,7 @@ async function appliquerEtat(action, params = {}) {
   else if (action === 'set_criteria') { criteria = mergeCriteria(params.criteria); }
   else if (action === 'set_contact') {
     if (!params.statut) delete contacts[params.id];
-    else contacts[params.id] = { ...(contacts[params.id] || {}), statut: params.statut, maj: new Date().toISOString(), relance: params.relance_jours ? new Date(Date.now() + params.relance_jours * 864e5).toISOString() : (contacts[params.id]?.relance ?? null) };
+    else contacts[params.id] = { ...(contacts[params.id] || {}), statut: params.statut, maj: new Date().toISOString(), relance: params.relance_jours ? new Date(Date.now() + params.relance_jours * 864e5).toISOString() : (['reponse', 'refuse', 'sans_suite', 'visite'].includes(params.statut) ? null : contacts[params.id]?.relance ?? null) };
   }
   sauverCacheLocal();
   if (!config.botUrl || !config.botToken) return;
@@ -529,11 +529,20 @@ function afficherProposition(p) {
 const CANAUX = { messagerie_annonce: "messagerie de l'annonce", email: 'e-mail', sms: 'SMS', telephone: 'téléphone' };
 const annonceParId = (id) => ranked.find((x) => x.id === id) || manuel.find((x) => x.id === id);
 
-function copier(texte) {
-  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(texte);
-  const ta = document.createElement('textarea'); ta.value = texte; document.body.appendChild(ta); ta.select();
-  document.execCommand('copy'); ta.remove();
-  return Promise.resolve();
+// Copie dans le presse-papiers ; renvoie false si le navigateur refuse (permission, iOS…) pour que l'appelant
+// puisse le dire à Tabatha au lieu d'échouer en silence.
+async function copier(texte, source) {
+  try {
+    if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(texte); return true; }
+  } catch { /* on tente le repli */ }
+  try {
+    const ta = source ?? Object.assign(document.createElement('textarea'), { value: texte });
+    if (!source) document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    const ok = document.execCommand('copy');
+    if (!source) ta.remove();
+    return ok;
+  } catch { return false; }
 }
 function telechargerIcs(nom, contenu) {
   const url = URL.createObjectURL(new Blob([contenu], { type: 'text/calendar;charset=utf-8' }));
@@ -577,7 +586,7 @@ function carteProposition(p) {
       <textarea class="brouillon" rows="9">${esc(texte)}</textarea>
       ${boutons('<button class="btn ghost small" data-copier type="button">Copier</button>', `<a class="btn ghost small" href="${esc(safeUrl(p.lien))}" target="_blank" rel="noopener noreferrer">Ouvrir l'annonce ↗</a>`, '<button class="btn primary small" data-envoye type="button">J\'ai envoyé ✔</button>')}`;
     const ta = div.querySelector('textarea');
-    div.querySelector('[data-copier]').onclick = async (e) => { await copier(ta.value); e.target.textContent = 'Copié ✔'; };
+    div.querySelector('[data-copier]').onclick = async (e) => { const ok = await copier(ta.value, ta); e.target.textContent = ok ? 'Copié ✔' : 'Sélectionné : copie à la main'; if (!ok) { ta.focus(); ta.select(); } };
     div.querySelector('[data-envoye]').onclick = async () => {
       await appliquerEtat('set_contact', { id: p.id, statut: 'contacte', relance_jours: 3, canal: p.canal, url: p.lien });
       render();
@@ -609,6 +618,7 @@ function afficherPropositions(props = []) {
     else { const c = carteProposition(p); if (c) zone.appendChild(c); }
   }
   zone.hidden = !zone.children.length;
+  const log = $('#bot-log'); log.scrollTop = log.scrollHeight; // la zone de cartes réduit le journal : on recolle en bas
 }
 
 async function envoyerBot(message) {
@@ -618,6 +628,7 @@ async function envoyerBot(message) {
   dessinerBotLog();
   botEnvoi = true;
   $('#bot-propositions').hidden = true;
+  $('#bot-proposal').hidden = true; // une proposition de critères de l'échange précédent n'est plus d'actualité
   $('#bot-etat').textContent = 'Claude réfléchit…';
   try {
     const res = await fetch(config.botUrl, {
@@ -633,6 +644,7 @@ async function envoyerBot(message) {
     $('#bot-etat').textContent = '';
     if (data.propositions?.length) afficherPropositions(data.propositions);
     else { afficherPropositions([]); if (data.proposal) afficherProposition(data.proposal); }
+    { const log = $('#bot-log'); log.scrollTop = log.scrollHeight; }
   } catch (e) {
     dessinerBotLog();
     $('#bot-etat').textContent = `Erreur : ${e.message}`;

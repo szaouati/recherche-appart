@@ -81,6 +81,35 @@ sur chaque annonce, pour montrer que tout est modifiable en discutant. Une bulle
 explique la transparence : ce qu'elle dit au bot et ses ♥ / ✕ / notes sont vus par Sacha. Après un changement de critères,
 une bulle légère (👍/👎, une fois par appareil) récolte un avis rapide.
 
+#### L'agent du chat (24/09/2026) : lire, proposer, jamais agir seul
+
+Le chat n'est plus un simple « ajuste mes critères » : `worker/src/agent.mjs` fait tourner une boucle d'agent Anthropic
+(6 tours max, 50 s de budget, modèle = variable `MODEL` du Worker, `claude-sonnet-5` par défaut, repli automatique sur
+`claude-haiku-4-5-20251001` si l'ID est refusé ; prompt caching). Deux familles d'outils :
+
+- **Lecture** (exécutés côté Worker, sans effet) : `list_listings`, `get_listing`, `compare_listings`, `explain_funnel`
+  (pourquoi si peu d'annonces + scénarios « et si »), `assess_risk` (signaux d'arnaque, jamais une accusation),
+  `get_contact_board`. Les annonces ne sont chargées que si un de ces outils est appelé.
+- **Proposition** (aucun effet, validés côté serveur puis renvoyés au navigateur dans `propositions[]`) : `propose_criteria`,
+  `propose_listing_actions` (♥/✕/note), `propose_add_listing`, `propose_contact_message`, `propose_contact_status`,
+  `propose_visit`. **Le bot ne modifie jamais rien seul** : chaque proposition s'affiche sous forme de carte que Tabatha
+  applique ou ignore d'un tap. Le texte des annonces est traité comme non fiable (rappel injecté dans chaque résultat d'outil).
+
+**Prise de contact** : le bot rédige un brouillon, Tabatha le relit, le copie et l'envoie **elle-même** dans la messagerie
+de l'annonce (Leboncoin/PAP/SeLoger exigent connexion + captcha : jamais automatisé). « J'ai envoyé ✔ » note le suivi.
+Le suivi de contact (`statut`: à contacter / contacté / réponse / visite / refusé / sans suite, note, relance, visite) est
+partagé dans `etat.json` → `contacts` (action Worker `set_contact`) ; une relance à 3 jours apparaît dans le bandeau
+« ⏰ N relances à faire » (une réponse, un refus ou une visite fixée l'efface). Une visite se télécharge en `.ics`.
+
+**« 👤 Mon dossier »** (prénom, situation, téléphone, disponibilités) reste dans le localStorage de l'appareil : le bot
+n'écrit que des marqueurs `{{prenom}}` `{{situation}}` `{{telephone}}` `{{disponibilites}}`, remplacés dans le navigateur au
+moment de copier. Rien de cela ne part vers le Worker, le journal ou le dépôt public. Le journal `contact` ne garde que
+l'id de l'annonce et le statut, jamais la note.
+
+Tests : `test/agent.test.mjs` (faux modèle scripté), `test/agent-ui.test.mjs`, `test/worker.test.mjs`.
+Coût : plusieurs tours d'outils avec Sonnet coûtent plusieurs cents par message ; `MODEL=claude-haiku-4-5-20251001` pour réduire.
+Point d'attention : charger/classer ~750 annonces coûte ~10-20 ms de CPU, à surveiller face à la limite du plan gratuit Cloudflare (erreur 1102).
+
 ### Journal partagé (`docs/data/journal.json`)
 
 Remplace l'ancien envoi manuel : chaque échange de chat, et chaque action notable (♥ garder, ✕ écarter, note personnelle

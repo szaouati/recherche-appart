@@ -86,7 +86,7 @@ h2 { font: 600 12px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.
 .field output { float: right; font-weight: 600; color: var(--accent); }
 .field.check { display: flex; gap: 8px; align-items: center; }
 input[type='range'] { width: 100%; accent-color: var(--accent); margin-top: 6px; }
-select, input[type='text'], input[type='url'], input[type='number'], input[type='password'], input:not([type]) { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; margin-top: 4px; }
+select, input[type='text'], input[type='url'], input[type='number'], input[type='password'], input[type='tel'], input:not([type]) { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; margin-top: 4px; }
 fieldset { border: 0; padding: 0; margin: 0 0 14px; }
 legend { font-size: 14px; padding: 0; margin-bottom: 6px; }
 .seg { display: flex; flex-wrap: wrap; gap: 6px 14px; }
@@ -184,7 +184,7 @@ dialog:has(.dlg.wide) { width: min(720px, calc(100vw - 24px)); }
 /* --- Carnet : une note personnelle par annonce, partagée avec Sacha via le journal --- */
 .note-bloc { margin-top: 10px; font-size: 13px; }
 .note-bloc summary { cursor: pointer; color: var(--muted); }
-.note-bloc textarea { width: 100%; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; resize: vertical; min-height: 60px; }
+#form-dossier textarea, .note-bloc textarea { width: 100%; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; resize: vertical; min-height: 60px; }
 .mascotte-mini { padding: 3px; width: 26px; height: 26px; display: inline-grid; place-items: center; }
 .mascotte-mini img { display: block; width: 18px; height: 18px; border-radius: 50%; }
 
@@ -223,7 +223,7 @@ dialog#dlg-bot { height: min(640px, 80vh); }
 .bot-proposal h4 { margin: 0 0 6px; font: 600 14px var(--serif); text-transform: none; letter-spacing: 0; color: var(--ink); }
 .bot-proposal ul { margin: 0; padding-left: 18px; }
 .bot-form { display: flex; gap: 8px; align-items: flex-end; margin-top: 8px; flex-shrink: 0; }
-.bot-form textarea { flex: 1; resize: none; max-height: 120px; font-size: 16px; border-radius: 14px; } /* 16px : évite le zoom auto de Safari iOS au focus */
+.bot-form textarea { flex: 1; resize: none; max-height: 120px; font: inherit; font-size: 16px; border-radius: 14px; } /* 16px : évite le zoom auto de Safari iOS au focus */
 @media (max-width: 480px) {
   dialog#dlg-bot { width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; position: fixed; inset: 0; }
   .bot-form { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
@@ -235,6 +235,8 @@ dialog#dlg-bot { height: min(640px, 80vh); }
 select.suivi { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 999px; padding: 4px 8px; font: 500 13px var(--sans); }
 .relances { margin-top: 8px; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--gold); }
 .bot-proposal.prop { margin-top: 8px; }
+.bot-proposal .dlg-actions { flex-wrap: wrap; }
+.bot-proposal .dlg-actions .btn { white-space: nowrap; }
 .bot-proposal .brouillon { width: 100%; box-sizing: border-box; margin: 6px 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 14px/1.4 var(--sans); }
 .bot-proposal .avert { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 6px 8px; }
 .bot-proposal p { margin: 4px 0; }
