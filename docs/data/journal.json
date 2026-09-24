@@ -2022,6 +2022,52 @@
         "alerteActive": true,
         "alerteScoreMin": 45
       }
+    },
+    {
+      "ts": "2026-09-24T13:07:43.893Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Pourquoi j'ai si peu d'annonces ?",
+      "reply": "Sur 692 annonces suivies, il n'en reste que **21** qui passent tous tes filtres 😊\n\nLe plus gros frein, c'est le 18e uniquement : ça exclut à lui seul 607 annonces. Ensuite le budget à 900 € en élimine 451, et le DPE F/G exclu en enlève 114 (le rez-de-chaussée, très peu : 72, mais avec chevauchement).\n\nConcrètement, si jamais tu veux voir plus large un jour :\n- Ouvrir à tout Paris → +147 annonces\n- Accepter DPE F/G → +8\n- Accepter les RDC → +5\n- Monter le budget à 1000 € → +3\n\nMais ce sont tes critères, donc aucun souci si tu préfères rester stricte sur le 18e 👍 Tu veux que je te montre les 21 qui passent actuellement ?",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "explain_funnel"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
