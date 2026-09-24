@@ -2068,6 +2068,52 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:42:41.597Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Qui a répondu à mes demandes ?",
+      "reply": "Pour l'instant, ton suivi est vide 📭 : tu n'as encore contacté aucune annonce (ou en tout cas rien n'est noté de ton côté).\n\nSi tu as déjà envoyé des messages, je peux t'aider à créer le suivi pour une annonce précise (statut « contacté », « réponse reçue »...) — dis-moi juste laquelle et où ça en est !",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "get_contact_board"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
