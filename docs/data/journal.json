@@ -2483,6 +2483,52 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:45:31.562Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Un de mes favoris a-t-il disparu ?",
+      "reply": "Non, pas de souci de ce côté-là 🙂 En fait tu n'as **aucun favori** enregistré pour l'instant (0 favori, et donc 0 disparu). Si tu veux, je peux te montrer les meilleures annonces actuelles pour que tu en mettes en favori.",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "get_search_overview"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
