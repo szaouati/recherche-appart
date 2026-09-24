@@ -442,25 +442,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790178224235",
-      "source": "Manuel",
-      "url": "https://www.leboncoin.fr/ad/locations/3256106358",
-      "title": "Leboncoin (recherche) — 750€, 30m², 2p — Chapelle-Marx Dormoy",
-      "price": 750,
-      "surface": 30,
-      "rooms": 2,
-      "arrondissement": 18,
-      "floor": 3,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-23T15:43:44.235Z",
-      "last_seen": "2026-09-23T15:43:44.235Z",
-      "publishedAt": "2026-09-23T15:43:44.235Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790178221419",
       "source": "Manuel",
       "url": "https://www.leboncoin.fr/ad/locations/3245416013",
@@ -557,5 +538,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T09:26:09.918Z"
+  "updatedAt": "2026-09-24T09:26:20.587Z"
 }
