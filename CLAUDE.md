@@ -105,6 +105,14 @@ les annonces manuelles absentes des exports du jour dès qu'on est sûr qu'elles
 `supprimer_manuel` du Worker (retire aussi favoris/notes liés ; réversible via git). Si l'annonce a un favori ou une note,
 le signaler à Sacha avant de retirer. Le message WhatsApp du matin suit le runbook « top 10 » (gabarit ci-dessous).
 
+### Formulaire de relecture (Sacha filtre avant Tabatha)
+
+`node scripts/avis/make-lot.mjs --exclude=<ids déjà relus>` génère `docs/data/avis-lot.json` (annonces visibles par
+Tabatha pas encore relues) ; Sacha les note sur `https://szaouati.github.io/recherche-appart/avis.html` (👍 OK / 🤔 Bof /
+🚫 À écarter + motifs + « ce qui manque à l'appli »). Ses réponses arrivent dans `docs/data/journal.json` :
+entrées `type:'avis'`, `payload.sujet:'relecture_lot'` (`reponses:[{id,p,v,r,c}]`, `manque`, `remarque`). Les relire,
+retirer les 🚫 avec `supprimer_manuel`, et tirer les enseignements (motifs récurrents → règles de filtrage ci-dessous).
+
 ### Filtre qualité des annonces (appris de Sacha le 24/09/2026)
 
 Sacha relit la liste AVANT Tabatha et écarte à la main. Sur un top 10, 5 annonces Leboncoin sur 10 n'étaient pas
