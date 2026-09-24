@@ -2114,6 +2114,52 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:42:46.877Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] C'est quand mes prochains rendez-vous ?",
+      "reply": "Pour l'instant, ton suivi est vide : aucune visite programmée ni contact enregistré 📭\n\nSi tu as déjà pris rendez-vous ou contacté des propriétaires, dis-le-moi et je te propose de mettre le suivi à jour (statut + date de visite) pour que je puisse te le rappeler la prochaine fois.",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "get_contact_board"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
