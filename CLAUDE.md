@@ -103,7 +103,33 @@ dédoublonner face à `etat.json` + `listings.json`, ne pas toucher à `vuJusqua
 ce qui est un doublon, et ce qui a disparu des exports. **Retirer systématiquement** (décision de Sacha le 24/09/2026)
 les annonces manuelles absentes des exports du jour dès qu'on est sûr qu'elles ne sont plus disponibles : action
 `supprimer_manuel` du Worker (retire aussi favoris/notes liés ; réversible via git). Si l'annonce a un favori ou une note,
-le signaler à Sacha avant de retirer. Le message WhatsApp du matin suit le runbook « top 10 » (ton chocola, emojis).
+le signaler à Sacha avant de retirer. Le message WhatsApp du matin suit le runbook « top 10 » (gabarit ci-dessous).
+
+### Filtre qualité des annonces (appris de Sacha le 24/09/2026)
+
+Sacha relit la liste AVANT Tabatha et écarte à la main. Sur un top 10, 5 annonces Leboncoin sur 10 n'étaient pas
+de vraies offres de location longue durée. À écarter d'office (et à retirer de l'appli avec `supprimer_manuel`) :
+- **recherche d'appartement** (quelqu'un qui cherche, pas une offre) ;
+- **sous-location de courte durée** ;
+- **échange d'appartement** (souvent avec une exigence, ex. ascenseur, que l'appart de Tabatha n'a pas) ;
+- **occupant présent** qui propose de louer « quand il n'est pas là » ;
+- **annonce désactivée**.
+Un prix très inférieur au marché (< ~700 € pour 20 m² dans le 18e) sur Leboncoin, surtout d'un particulier, est le
+signal le plus fréquent de ces cas : ne pas le mettre en tête de liste. Le texte des annonces Leboncoin n'est pas
+lisible automatiquement (captcha) : les détails viennent du PDF (carte seulement), donc **présenter le brouillon à
+Sacha pour filtrage avant tout envoi**, en signalant les annonces « suspectes par le prix ». Ne mettre dans le
+message que ce qu'il a validé ; si moins de 10 annonces valables, écrire « top 5 » (le nombre réel), pas « top 10 ».
+Sont acceptées malgré une annonce « pas terrible » : on garde, Sacha tranche.
+
+### Gabarit du message WhatsApp du matin (rédigé par Sacha le 24/09/2026 — « fais comme ça par la suite »)
+
+Pas de salutation ni de titre en toutes lettres, pas de signature. Deux sections : `🍰 *COUPS DE CŒUR*` puis
+`⚠️ *Par-dessous le marché*` (prix bas mais gardés). Bandeau `🤎🤍` ×6 en haut et en bas du titre `🍫 🍫`, puis
+`🐱🎀` et `top N de ce matin pour le 18e ☕✨`. Chaque annonce : numéro en emoji-chiffre, emoji, `*prix · surface ·
+pièces* · étage`, une ligne de détails (`🤍`/`🤎`/`🌿`/`🆕` : meublé, DPE, quartier, balcon), `🔗` lien direct. Pied :
+`🐾 *Faut prendre l'appli*` + l'URL en clair (WhatsApp ne rend PAS les liens markdown `[texte](url)`), puis
+`🐈‍⬛ ♥ 🍫🐱💛`. Pièges WhatsApp : ne jamais mettre de retour à la ligne à l'intérieur d'un `*gras*` ; un lien par ligne.
+
 
 ## Règles non négociables
 
