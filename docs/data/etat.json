@@ -98,25 +98,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790233631919",
-      "source": "Manuel",
-      "url": "https://www.leboncoin.fr/ad/locations/3275598896",
-      "title": "Leboncoin — 750€, 18m², 1p — Chapelle-Marx Dormoy",
-      "price": 750,
-      "surface": 18,
-      "rooms": 1,
-      "arrondissement": 18,
-      "floor": 2,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-24T07:07:11.919Z",
-      "last_seen": "2026-09-24T07:07:11.919Z",
-      "publishedAt": "2026-09-24T07:07:11.919Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790178437700",
       "source": "Manuel",
       "url": "https://www.seloger.com/classified-search?distributionTypes=Rent&estateTypes=Apartment&locations=POCOFR4812&priceMax=900",
@@ -462,5 +443,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T10:33:35.154Z"
+  "updatedAt": "2026-09-24T10:33:36.821Z"
 }
