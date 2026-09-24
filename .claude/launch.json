@@ -1,6 +1,35 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "site", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8765", "--directory", "docs"], "port": 8765 }
+    {
+      "name": "maquettes",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "--directory",
+        "design"
+      ],
+      "port": 8766
+    },
+    {
+      "name": "site-test",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/dev-serveur.mjs"
+      ],
+      "port": 8901
+    },
+    {
+      "name": "site-stress",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/dev-serveur.mjs",
+        "--vide",
+        "--stress"
+      ],
+      "port": 8901
+    }
   ]
 }

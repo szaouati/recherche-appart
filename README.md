@@ -22,7 +22,7 @@ GitHub Actions (cron 30 min)  →  collector/collect.mjs  →  docs/data/listing
 | PAP, SeLoger, Leboncoin (accès direct) | ❌ bloqué | HTTP 403 dès la première requête, même avec des en-têtes de navigateur. Anti-bot + CGU. Non contournable proprement depuis GitHub Actions. |
 | E-mail SeLoger | ✅ branchée, testée | IMAP + analyse HTML déterministe. Voir « Phase 2 ». |
 | E-mail PAP, Leboncoin | 📬 alertes créées, pas encore lues | PAP : aucune vraie annonce reçue à ce jour. Leboncoin : alerte pas encore créée. |
-| Ajout manuel (Facebook, bouche-à-oreille) | ✅ | Bouton « + Ajouter une annonce » sur le site. Stocké dans le navigateur de Tabatha. |
+| Ajout manuel (Facebook, bouche-à-oreille) | ✅ | « Plus → Ajouter une annonce » sur le site. Partagé entre appareils (état partagé). |
 
 ## Mise en ligne
 
@@ -75,8 +75,8 @@ un changement — propose un nouveau réglage complet (diff affiché : « Budget
 
 Une petite mascotte (`docs/mascotte.webp` — image fournie par Sacha, recadrée et réduite pour le web depuis
 `il_fullxfull.7846345879_12sa.webp`, 3000×3000 sans transparence à l'origine ; **origine et droits de réutilisation à
-confirmer avec Sacha**, notamment parce que ce dépôt est public) flotte en bas de l'écran et ouvre le même chat.
-Elle apparaît aussi à côté du panneau « Mes critères » et
+confirmer avec Sacha**, notamment parce que ce dépôt est public) est le bouton rond en haut à droite de l'en-tête et ouvre le chat.
+Elle apparaît aussi sur la page « Mes critères » (bouton dédié) et
 sur chaque annonce, pour montrer que tout est modifiable en discutant. Une bulle d'accueil (une fois par appareil)
 explique la transparence : ce qu'elle dit au bot et ses ♥ / ✕ / notes sont vus par Sacha. Après un changement de critères,
 une bulle légère (👍/👎, une fois par appareil) récolte un avis rapide.
@@ -169,8 +169,9 @@ l'usage de l'API Anthropic est facturé à Sacha (modèle Haiku, conversations c
 node collector/collect.mjs            # collecte complète (~6 s) et écrit docs/data/listings.json
 node collector/collect.mjs --quick    # seulement les annonces les plus récentes
 node collector/collect.mjs --dry      # simulation : n'écrit rien, n'envoie rien, affiche les alertes
-python3 -m http.server 8765 --directory docs   # puis http://localhost:8765
-node --test test/*.test.mjs           # 15 tests (filtres, score, verdicts, e-mail SeLoger, détection de caractéristiques)
+node --test test/*.test.mjs           # 88 tests (filtres, score, verdicts, e-mail, Worker, agent, affichage des annonces, versions du site)
+node scripts/version-site.mjs         # après toute modif de docs/**/*.js|mjs|css : met à jour les ?v= (cache)
+node scripts/dev-serveur.mjs          # site + vrai Worker + faux GitHub/Anthropic en mémoire → http://localhost:8901
 ```
 
 ## Comment l'annonce est notée

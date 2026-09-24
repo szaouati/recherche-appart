@@ -30,7 +30,8 @@ que de cache d'appoint par appareil (clés `*Cache`), jamais de source de vérit
 | `docs/data/etat.json` | **État partagé** : favoris/écartés (`statut`), notes, annonces ajoutées à la main (`manuel`), suivi de contact (`contacts`), dernière visite (`vuJusqua`) | Le Worker uniquement, via `POST /etat` |
 | `docs/data/listings.json` | Annonces collectées + score, ~toutes les 30 min | `collector/collect.mjs` (Actions) |
 | `docs/data/journal.json` | **Journal partagé** (historique, append-only) : chaque échange avec le bot dans l'appli, et chaque action notable (♥ garder, ✕ écarter, note personnelle, changement de critères, ajout manuel, 👍/👎 à la mascotte) | Le Worker (`worker/src/index.mjs`), en tâche de fond, à chaque interaction |
-| `docs/app.js` / `docs/score.mjs` | Classement + libellés (`verdictScore`, pas de note brute affichée) | — |
+| `docs/score.mjs` | Classement + libellés (`verdictScore`, pas de note brute affichée) + règle d'affichage `estVisible` (partagée site/Worker/scripts) | — |
+| `docs/app.js` + `docs/js/*.mjs` + `docs/app.css` | Le site (front refondu le 24/09/2026, voir § « Front du site ») | — |
 | `samples/` (gitignored) | E-mails d'alerte PAP/SeLoger/Leboncoin, pour construire l'analyseur | Sacha, ou lu directement dans `alertes.appart.tabatha@gmail.com` via le connecteur Gmail de la session (vérifier que c'est bien ce compte avant toute lecture) |
 
 `docs/data/journal.json` reste l'historique (append-only, jamais rejoué) ; `docs/data/etat.json`
@@ -41,6 +42,39 @@ Ancienne mécanique supprimée le 23/09/2026 (sécurité) : un bouton ⚙ demand
 GitHub personnel dans le navigateur pour pousser `criteria.json` depuis le site. Il est parti en
 même temps que ce chantier — plus aucun jeton ne doit jamais transiter par le navigateur, le
 Worker a déjà tout ce qu'il faut avec son propre `GITHUB_TOKEN`.
+
+## Front du site (refonte design du 24/09/2026 — direction « Vanille »)
+
+Site = appli web mobile d'abord (installable PWA), **sans étape de compilation** : GitHub Pages sert `docs/` tel quel (modules ES
+natifs, vanilla). Maquettes et générateur : `design/` (`node design/build-maquettes.mjs`). Avancement par paliers : voir l'historique git.
+
+| Fichier | Rôle |
+|---|---|
+| `docs/index.html` | Coque : en-tête, barre d'onglets (`#tabbar`), `#vue` (écran courant), `#detail` (fiche annonce), dialogs (`#dlg-add`, `#dlg-dossier`, `#dlg-bot`) |
+| `docs/app.js` | Routage par hash + événements **délégués** (un seul `document.addEventListener('click')`, actions via `data-*`) + rendu |
+| `docs/js/etat.mjs` | **État partagé** `S` (critères, statut, notes, contacts, manuel…), `appliquerEtat()` → Worker, synchro ~25 s, `emit()`/`surChangement()`. Jamais de localStorage comme vérité |
+| `docs/js/vues.mjs` | Écrans : annonces, favoris, suivi, plus, écartées, critères, détail (chacun renvoie du HTML) |
+| `docs/js/cartes.mjs` | Composants d'annonce : `carte()`, `visuel()` (photo **ou tuile** de remplacement), `badges()`, squelettes |
+| `docs/js/annonce-ui.mjs` | Fonctions **pures** d'affichage (quartier, type, étage, badges…) — testées (`test/annonce-ui.test.mjs`) |
+| `docs/js/chat.mjs` | Chat « Demander à Claude » + cartes de propositions (le bot ne modifie jamais rien seul) |
+| `docs/js/criteres.mjs`, `dialogs.mjs`, `mascotte.mjs`, `toast.mjs`, `util.mjs` | Formulaire critères ; ajout manuel + « Mon dossier » ; bulles ; toasts ; utilitaires |
+| `docs/app.css` | Design system : jetons (§1, clair/sombre), composants, `prefers-reduced-motion`. `docs/style.css` = ancienne feuille, **utilisée seulement par `avis.html`** |
+
+Routes : `#/` annonces · `#/favoris` · `#/suivi` · `#/plus` · `#/plus/criteres` · `#/plus/ecartees` · `#/annonce/<id>` (fiche par-dessus l'onglet
+courant ; plein écran sur mobile, tiroir sur ≥ 1024 px).
+
+Conventions : mobile d'abord (cibles ≥ 44 px, champs à 16 px pour éviter le zoom iOS) ; une carte = un lien étiré (`a.lien-carte`) + boutons
+`z-index` au-dessus ; jamais de trou photo (`tuile()` ; une image tierce cassée est remplacée par la tuile, cf. `app.js`) ; tout texte d'annonce passe par
+`esc()` ; pas de `alert/confirm` (utiliser `toast()` avec « Annuler ») ; la vue n'est jamais redessinée pendant qu'un champ a le focus.
+`estVisible`/`rankListings` (`docs/score.mjs`) restent LA règle d'affichage : ne pas la dupliquer.
+
+**Versions / cache** : ne plus éditer les `?v=` à la main. Après TOUTE modification de `docs/**/*.js|mjs|css` : `node scripts/version-site.mjs`
+(empreinte de chaque fichier → import map + `?v=` de `app.js`/`app.css` dans `index.html`). `test/site-version.test.mjs` échoue si on l'oublie.
+
+**Tester sans risque** : `node scripts/dev-serveur.mjs [--vide] [--stress]` (ou `preview_start` « site-test » / « site-stress ») → http://localhost:8901 :
+le site + le VRAI code du Worker avec faux GitHub/Anthropic en mémoire (rien n'est écrit nulle part). ⚠️ Ne jamais tester un site servi sur
+`localhost:8765` avec `config.json` : l'origine est autorisée par le VRAI Worker, chaque ♥ écrirait dans le dépôt public. Vérifier ensuite à
+375 / 768 / 1280 px + mode sombre (état vide, annonce sans photo, titre très long, 150+ annonces avec `--stress`). Le vrai iPhone/Safari ne se teste pas ici.
 
 ## Runbook — Sacha demande une mise à jour « top 10 »
 
@@ -88,7 +122,7 @@ de vrais e-mails : SeLoger 23/09/2026, Leboncoin et PAP 24/09/2026). Voir README
   retirées par `supprimer_manuel`, que le Worker alimente). Si on retire une annonce à la main autrement qu'avec
   `supprimer_manuel`, ajouter sa clé à `rejetes` sinon elle peut revenir par e-mail.
 - **Visibilité** : une annonce issue d'un e-mail n'est lue qu'une fois (son `last_seen` ne se rafraîchit jamais) ; le site la garde
-  10 jours (`SOURCES_EMAIL` dans `docs/app.js` et `scripts/avis/make-lot.mjs`), au lieu des 48 h des annonces Bien'ici. Ce que
+  10 jours (`SOURCES_EMAIL` dans `docs/score.mjs` et `scripts/avis/make-lot.mjs`), au lieu des 48 h des annonces Bien'ici. Ce que
   l'e-mail ne peut pas savoir (RDC, annonce louée) se corrige au passage du PDF du matin : marquer `retire:true` dans
   `listings.json` l'annonce absente/RDC, et l'ajouter à `rejetes`.
 - Jinka : alerte créée le 23/09 sur la boîte, aucun e-mail exploitable reçu à ce jour — même méthode si ça arrive (lire le HTML BRUT
