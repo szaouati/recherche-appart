@@ -2344,6 +2344,52 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:45:16.458Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Y a-t-il des baisses de prix ?",
+      "reply": "Pour l'instant, je ne vois **aucune annonce avec une baisse de prix** parmi celles que je suis pour toi 🙂\n\nJe peux vérifier plus régulièrement si tu veux, ou élargir la recherche (par exemple aux annonces déjà écartées) — dis-moi !",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "list_listings"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
