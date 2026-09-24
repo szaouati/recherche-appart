@@ -1801,6 +1801,51 @@
         "manuel:1790178239809",
         "manuel:1790233636590"
       ]
+    },
+    {
+      "ts": "2026-09-24T09:30:44.504Z",
+      "kind": "event",
+      "type": "ajout_manuel",
+      "payload": {
+        "url": "https://www.pap.fr/annonces/-r465400898",
+        "title": "PAP — 641€, 10m², studio — alerte e-mail du 24/09 (étage et DPE non indiqués)",
+        "price": 641
+      },
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
