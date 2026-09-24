@@ -98,25 +98,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790178437700",
-      "source": "Manuel",
-      "url": "https://www.seloger.com/classified-search?distributionTypes=Rent&estateTypes=Apartment&locations=POCOFR4812&priceMax=900",
-      "title": "SeLoger (recherche) — 845€, 16m², 1p — Clignancourt-Jules Joffrin (GoHome)",
-      "price": 845,
-      "surface": 16,
-      "rooms": 1,
-      "arrondissement": 18,
-      "floor": 2,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-23T15:47:17.700Z",
-      "last_seen": "2026-09-23T15:47:17.700Z",
-      "publishedAt": "2026-09-23T15:47:17.700Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790178435018",
       "source": "Manuel",
       "url": "https://www.seloger.com/classified-search?distributionTypes=Rent&estateTypes=Apartment&locations=POCOFR4812&priceMax=900",
@@ -403,5 +384,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T10:33:40.403Z"
+  "updatedAt": "2026-09-24T10:33:42.018Z"
 }
