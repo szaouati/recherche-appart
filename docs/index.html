@@ -36,10 +36,12 @@
       <svg class="flourish flourish--left" aria-hidden="true"><use href="#flourish-def"></use></svg>
       <p class="sub" id="maj">Chargement…</p>
       <p class="sub statut" id="statut-recherche"></p>
+      <button class="btn small relances" id="relances" type="button" hidden></button>
     </div>
     <div class="top-actions">
       <button class="btn primary" id="btn-bot">Demander à Claude</button>
       <button class="btn" id="btn-add">+ Ajouter une annonce</button>
+      <button class="btn ghost" id="btn-dossier" title="Ce que le bot met dans tes messages aux propriétaires (reste sur cet appareil)">👤 Mon dossier</button>
       <button class="btn ghost" id="btn-recharger-page" title="Recharger la page (pour voir les derniers changements)" aria-label="Recharger la page">⟳</button>
     </div>
   </header>
@@ -127,6 +129,19 @@
     </form>
   </dialog>
 
+  <dialog id="dlg-dossier">
+    <form method="dialog" id="form-dossier" class="dlg">
+      <h2>👤 Mon dossier</h2>
+      <svg class="flourish flourish--sm flourish--left" aria-hidden="true"><use href="#flourish-def"></use></svg>
+      <p class="hint">Ce que le bot glisse dans tes messages aux propriétaires. <b>Ça reste sur cet appareil</b> : ni Sacha, ni le journal, ni le bot ne le voient — le bot n'écrit que des marqueurs, remplacés ici au moment de copier.</p>
+      <label>Prénom <input name="prenom" autocomplete="given-name" maxlength="60"></label>
+      <label>Ma situation <textarea name="situation" rows="2" maxlength="300" placeholder="Ex. étudiante en master, garant parental, dossier complet"></textarea></label>
+      <label>Téléphone <input name="telephone" type="tel" autocomplete="tel" maxlength="30"></label>
+      <label>Mes disponibilités pour visiter <textarea name="disponibilites" rows="2" maxlength="300" placeholder="Ex. en semaine après 18h, samedi toute la journée"></textarea></label>
+      <div class="dlg-actions"><button class="btn ghost" value="cancel" formnovalidate>Annuler</button><button class="btn primary" value="ok">Enregistrer</button></div>
+    </form>
+  </dialog>
+
   <dialog id="dlg-bot">
     <div class="dlg wide bot-dlg">
       <div class="dlg-head"><h2>Demander à Claude</h2><button class="btn ghost small" id="bot-close" type="button">Fermer</button></div>
@@ -134,6 +149,7 @@
       <p class="hint">Dis-lui tout ce que tu veux changer ou ce que tu penses de ta recherche. Sacha voit cette conversation pour adapter le site — pour tout le reste, écris-lui directement.</p>
       <div id="bot-log" class="bot-log" aria-live="polite"></div>
       <div id="bot-proposal" class="bot-proposal" hidden></div>
+      <div id="bot-propositions" hidden></div>
       <form id="bot-form" class="bot-form">
         <textarea id="bot-input" rows="1" placeholder="Écris ton message…" required></textarea>
         <button class="btn primary" type="submit">Envoyer</button>
@@ -150,6 +166,6 @@
   <!-- ?v= à changer à chaque modification de app.js : GitHub Pages le met en cache 10 min (max-age),
        et certains navigateurs (Safari surtout) le gardent bien plus longtemps sans revalider tant
        que l'URL ne change pas. Sans ça, un appareil peut rester bloqué sur une vieille version. -->
-  <script type="module" src="app.js?v=20260924a"></script>
+  <script type="module" src="app.js?v=20260924b"></script>
 </body>
 </html>

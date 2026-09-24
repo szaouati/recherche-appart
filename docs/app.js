@@ -1,4 +1,5 @@
 import { CRITERES, mergeCriteria, rankListings, verdictScore, estVisible } from './score.mjs';
+import { STATUTS_LIBELLES, MARQUEURS, remplirMarqueurs, construireIcs, relanceDue, libelleRelance } from './agent-ui.mjs';
 
 const $ = (s, r = document) => r.querySelector(s);
 const store = {
@@ -40,6 +41,10 @@ let ranked = [];
 let notes = store.get('notesCache', store.get('notes', {})); // id -> texte libre (son carnet, partagé avec Sacha via le journal)
 let config = {}; // docs/config.json : { botUrl, botToken }
 let etatSnapshot = null; // dernier état partagé connu (comparaison pour éviter un rendu inutile)
+let contacts = store.get('contactsCache', {}); // id -> { statut, maj, relance, visite, note, canal } (suivi partagé)
+// « Mon dossier » (prénom, situation, téléphone, disponibilités) : UNIQUEMENT sur cet appareil, jamais envoyé
+// au Worker ni au journal public — le bot n'écrit que des marqueurs {{prenom}}… que l'on remplit ici.
+const dossier = () => store.get('dossier', {});
 
 function sauverCacheLocal() {
   store.set('criteriaCache', criteria);
@@ -47,14 +52,16 @@ function sauverCacheLocal() {
   store.set('statutCache', statut);
   store.set('vuJusquaCache', vuJusqua);
   store.set('notesCache', notes);
+  store.set('contactsCache', contacts);
 }
-function chaineEtat(etat) { return JSON.stringify([etat.criteria, etat.statut, etat.notes, etat.manuel, etat.vuJusqua]); }
+function chaineEtat(etat) { return JSON.stringify([etat.criteria, etat.statut, etat.notes, etat.manuel, etat.vuJusqua, etat.contacts]); }
 function adopterEtat(etat) {
   criteria = mergeCriteria(etat.criteria || {});
   statut = etat.statut && typeof etat.statut === 'object' ? etat.statut : {};
   notes = etat.notes && typeof etat.notes === 'object' ? etat.notes : {};
   manuel = Array.isArray(etat.manuel) ? etat.manuel : [];
   vuJusqua = etat.vuJusqua || vuJusqua;
+  contacts = etat.contacts && typeof etat.contacts === 'object' ? etat.contacts : {};
   sauverCacheLocal();
 }
 
@@ -74,6 +81,10 @@ async function appliquerEtat(action, params = {}) {
   else if (action === 'set_vu') { if (!vuJusqua || params.ts > vuJusqua) vuJusqua = params.ts; }
   else if (action === 'ajouter_manuel') { manuel.unshift(params.listing); }
   else if (action === 'set_criteria') { criteria = mergeCriteria(params.criteria); }
+  else if (action === 'set_contact') {
+    if (!params.statut) delete contacts[params.id];
+    else contacts[params.id] = { ...(contacts[params.id] || {}), statut: params.statut, maj: new Date().toISOString(), relance: params.relance_jours ? new Date(Date.now() + params.relance_jours * 864e5).toISOString() : (contacts[params.id]?.relance ?? null) };
+  }
   sauverCacheLocal();
   if (!config.botUrl || !config.botToken) return;
   try {
@@ -247,6 +258,8 @@ function dessinerOnglets() {
 
 function chips(l) {
   const c = [];
+  const ct = contacts[l.id];
+  if (ct) c.push(`<span class="chip contact${relanceDue(ct) ? ' due' : ''}">✉️ ${esc(STATUTS_LIBELLES[ct.statut] ?? ct.statut)}${libelleRelance(ct) ? ' · ' + esc(libelleRelance(ct)) : ''}${ct.visite ? ' · ' + esc(new Date(ct.visite).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) : ''}</span>`);
   if (l.first_seen > vuJusqua && l.source !== 'Manuel') c.push('<span class="chip flag">Nouveau</span>');
   const h = l.price_history;
   if (h && h.length > 1 && h.at(-1)[1] < h.at(-2)[1]) c.push(`<span class="chip drop">↓ ${eur(h.at(-2)[1] - h.at(-1)[1])}</span>`);
@@ -292,6 +305,10 @@ function carte(l) {
         <button class="mini" data-act="ecarte" aria-pressed="${statut[l.id] === 'ecarte'}">✕ Écarter</button>
         <button class="mini mascotte-mini" data-mascotte-annonce="${esc(l.id)}" type="button" title="En discuter avec le bot">
           <img src="mascotte.webp" width="18" height="18" alt=""></button>
+        <button class="mini" data-contact-annonce="${esc(l.id)}" type="button" title="Faire rédiger un message de contact par le bot">✉️ Contacter</button>
+        <select class="suivi" data-id="${esc(l.id)}" aria-label="Suivi de contact">
+          <option value="">Suivi…</option>${Object.entries(STATUTS_LIBELLES).map(([k, v]) => `<option value="${k}"${contacts[l.id]?.statut === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}<option value="__aucun">— Retirer le suivi</option>
+        </select>
         <span class="hint">${esc(l.source)} · ${l.publishedAt ? 'publiée ' + depuis(l.publishedAt) : 'vue ' + depuis(l.first_seen)}</span>
       </div>
     </div>
@@ -303,6 +320,9 @@ function render() {
   calculer();
   $('#statut-recherche').textContent = statutRecherche();
   dessinerOnglets();
+  const dues = Object.values(contacts).filter((c) => relanceDue(c)).length;
+  $('#relances').hidden = !dues;
+  $('#relances').textContent = `⏰ ${dues} relance${dues > 1 ? 's' : ''} à faire`;
   const liste = filtrer();
   $('#compte').textContent = `${liste.length} annonce${liste.length > 1 ? 's' : ''}`;
   $('#btn-vu').hidden = onglet !== 'nouveautes' || !liste.length;
@@ -359,10 +379,16 @@ function brancher() {
     if (b) { onglet = b.dataset.tab; limite = 30; render(); }
   });
   $('#liste').addEventListener('click', (e) => {
+    const bc = e.target.closest('[data-contact-annonce]');
+    if (bc) {
+      const l = ranked.find((x) => x.id === bc.dataset.contactAnnonce) || manuel.find((x) => x.id === bc.dataset.contactAnnonce);
+      if (l) { ouvrirBot(); envoyerBot(`Rédige-moi un message de contact pour cette annonce : ${eur(l.price)}${l.surface ? ` · ${l.surface} m²` : ''} · ${l.title ?? ''} (réf ${l.id}).`); }
+      return;
+    }
     const badge = e.target.closest('[data-mascotte-annonce]');
     if (badge) {
       const l = ranked.find((x) => x.id === badge.dataset.mascotteAnnonce);
-      if (l) ouvrirBot(`À propos de cette annonce (${l.title ?? ''} · ${l.price != null ? eur(l.price) : '?'} · ${l.url}) : `);
+      if (l) ouvrirBot(`À propos de cette annonce (${l.title ?? ''} · ${l.price != null ? eur(l.price) : '?'} · réf ${l.id}) : `);
       return;
     }
     const b = e.target.closest('[data-act]');
@@ -371,6 +397,17 @@ function brancher() {
     const actif = statut[id] !== b.dataset.act;
     const l = ranked.find((x) => x.id === id) || manuel.find((x) => x.id === id);
     appliquerEtat('set_statut', { id, valeur: actif ? b.dataset.act : null, url: l?.url, title: l?.title, price: l?.price });
+    render();
+  });
+  $('#liste').addEventListener('change', (e) => {
+    const sel = e.target.closest('select.suivi');
+    if (!sel) return;
+    const id = sel.dataset.id;
+    const l = ranked.find((x) => x.id === id) || manuel.find((x) => x.id === id);
+    const v = sel.value;
+    if (!v) return;
+    const statutContact = v === '__aucun' ? null : v;
+    appliquerEtat('set_contact', { id, statut: statutContact, relance_jours: statutContact === 'contacte' ? 3 : null, url: l?.url, title: l?.title });
     render();
   });
   $('#liste').addEventListener('focusout', (e) => {
@@ -404,6 +441,20 @@ function brancher() {
   // Simple recharge de la page : utile quand l'onglet reste ouvert longtemps et qu'on veut être
   // sûr de voir tout de suite les derniers changements (annonces, critères, favoris d'un autre appareil).
   $('#btn-recharger-page').addEventListener('click', () => location.reload());
+
+  $('#relances').addEventListener('click', () => { ouvrirBot(); envoyerBot('Qui dois-je relancer, et avec quel message ?'); });
+
+  $('#btn-dossier').addEventListener('click', () => {
+    const d = dossier();
+    const f = $('#form-dossier');
+    for (const k of Object.keys(MARQUEURS)) f.elements[k].value = d[k] || '';
+    $('#dlg-dossier').showModal();
+  });
+  $('#form-dossier').addEventListener('submit', (e) => {
+    if (e.submitter?.value !== 'ok') return;
+    const f = e.target;
+    store.set('dossier', Object.fromEntries(Object.keys(MARQUEURS).map((k) => [k, f.elements[k].value.trim()])));
+  });
 }
 
 
@@ -474,12 +525,99 @@ function afficherProposition(p) {
   });
 }
 
+// --- Propositions du bot (tout est à valider d'un tap : le bot ne modifie rien seul) ------------------------
+const CANAUX = { messagerie_annonce: "messagerie de l'annonce", email: 'e-mail', sms: 'SMS', telephone: 'téléphone' };
+const annonceParId = (id) => ranked.find((x) => x.id === id) || manuel.find((x) => x.id === id);
+
+function copier(texte) {
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(texte);
+  const ta = document.createElement('textarea'); ta.value = texte; document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); ta.remove();
+  return Promise.resolve();
+}
+function telechargerIcs(nom, contenu) {
+  const url = URL.createObjectURL(new Blob([contenu], { type: 'text/calendar;charset=utf-8' }));
+  const a = document.createElement('a'); a.href = url; a.download = nom; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function carteProposition(p) {
+  const div = document.createElement('div');
+  div.className = 'bot-proposal prop';
+  const termine = (t) => { div.innerHTML = `<p class="hint">${esc(t)}</p>`; };
+  const boutons = (...b) => `<div class="dlg-actions">${b.join('')}</div>`;
+  if (p.type === 'actions') {
+    div.innerHTML = `<h4>Claude te propose :</h4><ul>${p.actions.map((x) => `<li>${esc(x.libelle)}</li>`).join('')}</ul>${boutons('<button class="btn ghost small" data-ign type="button">Ignorer</button>', '<button class="btn primary small" data-ok type="button">Appliquer</button>')}`;
+    div.querySelector('[data-ign]').onclick = () => div.remove();
+    div.querySelector('[data-ok]').onclick = async () => {
+      termine('Application…');
+      for (const x of p.actions) {
+        if (x.action === 'note') await appliquerEtat('set_note', { id: x.id, texte: x.note, url: x.url, title: x.title });
+        else await appliquerEtat('set_statut', { id: x.id, valeur: x.action === 'retirer_statut' ? null : x.action, url: x.url, title: x.title, price: x.price });
+      }
+      render();
+      termine(`✔ Appliqué (${p.actions.length}).`);
+    };
+  } else if (p.type === 'ajout') {
+    div.innerHTML = `<h4>Ajouter cette annonce ?</h4><p>${esc(p.libelle)}</p>${boutons('<button class="btn ghost small" data-ign type="button">Ignorer</button>', '<button class="btn primary small" data-ok type="button">Ajouter</button>')}`;
+    div.querySelector('[data-ign]').onclick = () => div.remove();
+    div.querySelector('[data-ok]').onclick = async () => {
+      const now = new Date().toISOString();
+      const x = p.listing;
+      await appliquerEtat('ajouter_manuel', { listing: { id: `manuel:${Date.now()}`, source: 'Manuel', url: x.url, title: x.title, price: x.price, surface: x.surface, rooms: x.rooms, arrondissement: x.arrondissement, floor: x.floor, elevator: null, dpe: x.dpe, furnished: null, features: x.balcon ? { balcon: true } : {}, first_seen: now, last_seen: now, publishedAt: now, photo: null }, balcon: x.balcon });
+      render();
+      termine('✔ Annonce ajoutée.');
+    };
+  } else if (p.type === 'message') {
+    const { texte, manquants } = remplirMarqueurs(p.message, dossier());
+    div.innerHTML = `<h4>✉️ Brouillon — ${esc(p.libelle)}</h4>
+      <p class="hint">Canal : ${esc(CANAUX[p.canal] ?? p.canal)}. Relis-le, puis envoie-le toi-même : rien ne part tout seul.</p>
+      ${p.objet ? `<p><b>Objet :</b> ${esc(p.objet)}</p>` : ''}
+      ${manquants.length ? `<p class="hint avert">Il manque : ${esc(manquants.map((k) => MARQUEURS[k]).join(', '))}. Complète « 👤 Mon dossier » (en haut) ou corrige le texte.</p>` : ''}
+      <textarea class="brouillon" rows="9">${esc(texte)}</textarea>
+      ${boutons('<button class="btn ghost small" data-copier type="button">Copier</button>', `<a class="btn ghost small" href="${esc(safeUrl(p.lien))}" target="_blank" rel="noopener noreferrer">Ouvrir l'annonce ↗</a>`, '<button class="btn primary small" data-envoye type="button">J\'ai envoyé ✔</button>')}`;
+    const ta = div.querySelector('textarea');
+    div.querySelector('[data-copier]').onclick = async (e) => { await copier(ta.value); e.target.textContent = 'Copié ✔'; };
+    div.querySelector('[data-envoye]').onclick = async () => {
+      await appliquerEtat('set_contact', { id: p.id, statut: 'contacte', relance_jours: 3, canal: p.canal, url: p.lien });
+      render();
+      termine('✔ Noté : contacté. Je te rappellerai de relancer dans 3 jours si personne ne répond.');
+    };
+  } else if (p.type === 'contact') {
+    div.innerHTML = `<h4>Suivi — ${esc(p.libelle)}</h4><p><b>${esc(STATUTS_LIBELLES[p.statut])}</b>${p.note ? ` — ${esc(p.note)}` : ''}${p.relance_jours ? ` · relance dans ${p.relance_jours} j` : ''}</p>${boutons('<button class="btn ghost small" data-ign type="button">Ignorer</button>', '<button class="btn primary small" data-ok type="button">Enregistrer</button>')}`;
+    div.querySelector('[data-ign]').onclick = () => div.remove();
+    div.querySelector('[data-ok]').onclick = async () => { await appliquerEtat('set_contact', { id: p.id, statut: p.statut, note: p.note, relance_jours: p.relance_jours, url: annonceParId(p.id)?.url }); render(); termine('✔ Suivi enregistré.'); };
+  } else if (p.type === 'visite') {
+    const quand = new Date(p.debut).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+    div.innerHTML = `<h4>📅 Visite — ${esc(p.libelle)}</h4><p>${esc(quand)} (${p.duree_min} min)${p.lieu ? ` · ${esc(p.lieu)}` : ''}</p>${boutons('<button class="btn ghost small" data-ign type="button">Ignorer</button>', '<button class="btn primary small" data-ok type="button">Ajouter au calendrier</button>')}`;
+    div.querySelector('[data-ign]').onclick = () => div.remove();
+    div.querySelector('[data-ok]').onclick = async () => {
+      telechargerIcs('visite.ics', construireIcs({ titre: `Visite — ${p.libelle}`, debut: p.debut, dureeMin: p.duree_min, lieu: p.lieu, description: `${p.note ? p.note + '\n' : ''}${p.lien}` }));
+      await appliquerEtat('set_contact', { id: p.id, statut: 'visite', visite: new Date(p.debut).toISOString(), url: p.lien });
+      render();
+      termine('✔ Fichier calendrier téléchargé, visite notée dans le suivi.');
+    };
+  } else return null;
+  return div;
+}
+
+function afficherPropositions(props = []) {
+  const zone = $('#bot-propositions');
+  zone.innerHTML = '';
+  for (const p of props) {
+    if (p.type === 'criteres') afficherProposition(p.criteria);
+    else { const c = carteProposition(p); if (c) zone.appendChild(c); }
+  }
+  zone.hidden = !zone.children.length;
+}
+
 async function envoyerBot(message) {
   if (!config.botUrl || !config.botToken) { $('#bot-etat').textContent = "Le bot n'est pas encore configuré (docs/config.json)."; return; }
   botChat.push({ role: 'user', content: message });
   store.set('botChat', botChat.slice(-24));
   dessinerBotLog();
   botEnvoi = true;
+  $('#bot-propositions').hidden = true;
   $('#bot-etat').textContent = 'Claude réfléchit…';
   try {
     const res = await fetch(config.botUrl, {
@@ -493,7 +631,8 @@ async function envoyerBot(message) {
     store.set('botChat', botChat.slice(-24));
     dessinerBotLog();
     $('#bot-etat').textContent = '';
-    if (data.proposal) afficherProposition(data.proposal);
+    if (data.propositions?.length) afficherPropositions(data.propositions);
+    else { afficherPropositions([]); if (data.proposal) afficherProposition(data.proposal); }
   } catch (e) {
     dessinerBotLog();
     $('#bot-etat').textContent = `Erreur : ${e.message}`;

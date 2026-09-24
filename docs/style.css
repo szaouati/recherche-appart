@@ -228,3 +228,13 @@ dialog#dlg-bot { height: min(640px, 80vh); }
   dialog#dlg-bot { width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; position: fixed; inset: 0; }
   .bot-form { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
 }
+
+/* --- Suivi de contact & propositions du bot ------------------------------------------------------- */
+.chip.contact { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--ink); }
+.chip.contact.due { background: var(--warn-bg); color: var(--warn-ink); font-weight: 600; }
+select.suivi { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 999px; padding: 4px 8px; font: 500 13px var(--sans); }
+.relances { margin-top: 8px; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--gold); }
+.bot-proposal.prop { margin-top: 8px; }
+.bot-proposal .brouillon { width: 100%; box-sizing: border-box; margin: 6px 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 14px/1.4 var(--sans); }
+.bot-proposal .avert { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 6px 8px; }
+.bot-proposal p { margin: 4px 0; }
