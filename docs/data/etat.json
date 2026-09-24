@@ -195,7 +195,7 @@
     {
       "id": "manuel:1790178427040",
       "source": "Manuel",
-      "url": "https://www.seloger.com/classified-search?distributionTypes=Rent&estateTypes=Apartment&locations=POCOFR4812&priceMax=900",
+      "url": "https://www.seloger.com/annonce/location/ile-de-france/paris-75/paris-75000/26B4LANVUNV1",
       "title": "SeLoger (recherche) — 850€, 22.8m², 1p — Grandes Carrières-Clichy",
       "price": 850,
       "surface": 22.8,
@@ -557,5 +557,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T09:09:48.175Z"
+  "updatedAt": "2026-09-24T09:11:06.611Z"
 }
