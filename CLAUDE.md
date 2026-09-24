@@ -62,7 +62,7 @@ natifs, vanilla). Maquettes et générateur : `design/` (`node design/build-maqu
 | `docs/app.css` | Design system : jetons (§1, clair/sombre), composants, `prefers-reduced-motion`. `docs/style.css` = ancienne feuille, **utilisée seulement par `avis.html`** |
 
 Routes : `#/` annonces · `#/favoris` · `#/suivi` · `#/plus` · `#/plus/criteres` · `#/plus/ecartees` · `#/annonce/<id>` (fiche par-dessus l'onglet
-courant ; plein écran sur mobile, tiroir sur ≥ 1024 px).
+courant ; plein écran sur mobile, tiroir sur ≥ 1024 px). La fiche parcourt la liste d'où on vient (‹ › , ← →, glisser ; `location.replace` pour que « retour » ramène à la liste), partage l'annonce d'origine, et « Contacter » devient « Relancer » une fois contactée.
 
 Conventions : mobile d'abord (cibles ≥ 44 px, champs à 16 px pour éviter le zoom iOS) ; une carte = un lien étiré (`a.lien-carte`) + boutons
 `z-index` au-dessus ; jamais de trou photo (`tuile()` ; une image tierce cassée est remplacée par la tuile, cf. `app.js`) ; tout texte d'annonce passe par

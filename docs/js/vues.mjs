@@ -1,11 +1,11 @@
 // Écrans du site (chaque fonction renvoie du HTML ; app.js s'occupe du routage et des événements).
-import { STATUTS_LIBELLES, relanceDue } from '../agent-ui.mjs';
+import { STATUTS_LIBELLES, relanceDue, libelleRelance } from '../agent-ui.mjs';
 import { esc, safeUrl, eur, depuis } from './util.mjs';
 import { S, visible, annonceParId } from './etat.mjs';
 import { carte, squeletteCartes, visuel, badges, verdictDe, boutonCoeur, ICONES } from './cartes.mjs';
 import { htmlCriteres } from './criteres.mjs';
 import { PASTILLES, TRIS, filtresVides, nbFiltres, appliquer, compter, trier, bornes } from './filtres.mjs';
-import { quartier, typeLogement, etageLibelle, prixM2, surfaceLibelle, sourceAffichee } from './annonce-ui.mjs';
+import { quartier, typeLogement, etageLibelle, prixM2, surfaceLibelle, sourceAffichee, infosLoyer, historiquePrix } from './annonce-ui.mjs';
 
 export const ui = { seg: 'nouveautes', limite: 30, segInitialise: false, f: filtresVides() };
 const ctxFiltres = () => ({ contacts: S.contacts });
@@ -100,6 +100,10 @@ export function vueFavoris() {
 
 // --- Suivi (version simple ; le pipeline complet arrive au palier 4) ------------------------------
 const ORDRE_SUIVI = ['visite', 'reponse', 'contacte', 'a_contacter', 'refuse', 'sans_suite'];
+/** Annonces suivies, dans l'ordre d'affichage de l'onglet Suivi (pour « précédente / suivante » dans la fiche). */
+export function listeSuivi() {
+  return ORDRE_SUIVI.flatMap((k) => Object.entries(S.contacts).filter(([, c]) => c.statut === k).map(([id]) => annonceParId(id)).filter(Boolean));
+}
 export function vueSuivi() {
   if (!S.charge) return `<ul class="liste">${squeletteCartes(2)}</ul>`;
   const parStatut = {};
@@ -170,10 +174,35 @@ export function vueCriteres() {
 const faits = (l) => [
   ['Surface', surfaceLibelle(l)], ['Pièces', l.rooms], ['Étage', etageLibelle(l)],
   ['Ascenseur', l.elevator == null ? null : l.elevator ? 'Oui' : 'Non'], ['DPE', l.dpe], ['Meublé', l.furnished == null ? null : l.furnished ? 'Oui' : 'Non'],
-  ['Prix / m²', prixM2(l) ? `${prixM2(l)} €` : null], ['Charges', l.charges ? eur(l.charges) : null], ['Publiée', l.publishedAt ? depuis(l.publishedAt) : null],
+  ['Prix / m²', prixM2(l) ? `${prixM2(l)} €` : null], ['Publiée', l.publishedAt ? depuis(l.publishedAt) : null], ['Vue par le bot', l.first_seen ? depuis(l.first_seen) : null],
 ];
+const jour = (iso) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+const ICO = {
+  precedent: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  suivant: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  partager: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 12v7h14v-7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
 
-export function vueDetail(id) {
+/** Bloc « où j'en suis avec cette annonce » : statut, relance, visite, note de suivi. */
+function blocSuivi(l) {
+  const ct = S.contacts[l.id];
+  const resume = ct
+    ? `<div class="suivi-resume${relanceDue(ct) ? ' due' : ''}"><b>${esc(STATUTS_LIBELLES[ct.statut] ?? ct.statut)}</b>${libelleRelance(ct) ? ` · ${esc(libelleRelance(ct))}` : ''}
+        ${ct.visite ? `<div>📅 Visite : ${esc(new Date(ct.visite).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }))}</div>` : ''}
+        ${ct.maj ? `<small>Mis à jour ${esc(depuis(ct.maj))}${ct.canal ? ` · via ${esc(ct.canal.replace('messagerie_annonce', "la messagerie de l'annonce"))}` : ''}</small>` : ''}
+        ${ct.note ? `<p>${esc(ct.note)}</p>` : ''}</div>`
+    : '';
+  return `${resume}<select class="suivi" data-id="${esc(l.id)}" aria-label="Suivi de contact">
+      <option value="">${ct ? 'Changer le statut…' : 'Pas encore contactée'}</option>${Object.entries(STATUTS_LIBELLES).map(([k, x]) => `<option value="${k}"${ct?.statut === k ? ' selected' : ''}>${esc(x)}</option>`).join('')}<option value="__aucun">— Retirer le suivi</option>
+    </select>`;
+}
+
+/** nav : { index, total } quand l'annonce fait partie de la liste qu'on parcourait (sinon pas de flèches). */
+export function vueDetail(id, nav = null) {
+  if (!S.charge) {
+    return `<div class="det-barre"><button class="rond" data-retour aria-label="Retour">‹</button><span class="det-titre">Chargement…</span></div>
+      <div class="det-defile"><div class="det-hero"><div class="tuile"></div></div><div class="det-corps"><i class="sq l1"></i><i class="sq l2"></i><i class="sq l3"></i></div></div>`;
+  }
   const l = annonceParId(id);
   if (!l) {
     return `<div class="det-barre"><button class="rond" data-retour aria-label="Retour">‹</button><span class="det-titre">Annonce introuvable</span></div>
@@ -181,12 +210,18 @@ export function vueDetail(id) {
   }
   const v = verdictDe(l);
   const note = S.notes[l.id] || '';
-  const ct = S.contacts[l.id];
   const detail = l.ok
     ? `<ul class="pourquoi">${(l.detail ?? []).filter((d) => d.poids).map((d) => `<li><span>${esc(d.label)}</span><span class="pts">${d.points}</span><i style="--w:${Math.round((d.valeur ?? 0) * 100)}%"></i></li>`).join('')}</ul>`
     : `<ul class="rejets">${(l.rejets ?? []).map((r) => `<li>${esc(r)}</li>`).join('')}</ul>`;
   const ecartee = S.statut[l.id] === 'ecarte';
-  return `<div class="det-barre"><button class="rond" data-retour aria-label="Retour à la liste">‹</button><span class="det-titre">${esc(quartier(l))}</span>${boutonCoeur(l)}</div>
+  const loyer = infosLoyer(l);
+  const histo = historiquePrix(l);
+  const relance = S.contacts[l.id]?.statut === 'contacte';
+  const flechesNav = nav && nav.total > 1
+    ? `<span class="det-nav"><button class="rond petit" type="button" data-nav="-1" aria-label="Annonce précédente"${nav.index === 0 ? ' disabled' : ''}>${ICO.precedent}</button><span class="det-pos" aria-live="polite">${nav.index + 1} / ${nav.total}</span><button class="rond petit" type="button" data-nav="1" aria-label="Annonce suivante"${nav.index === nav.total - 1 ? ' disabled' : ''}>${ICO.suivant}</button></span>`
+    : `<span class="det-titre">${esc(quartier(l))}</span>`;
+  return `<div class="det-barre"><button class="rond" data-retour aria-label="Retour à la liste">‹</button>${flechesNav}
+      <button class="rond" type="button" data-partager="${esc(l.id)}" aria-label="Partager l'annonce">${ICO.partager}</button>${boutonCoeur(l)}</div>
     <div class="det-defile">
       <div class="det-hero">${visuel(l, { eager: true })}</div>
       <div class="det-corps">
@@ -197,10 +232,10 @@ export function vueDetail(id) {
         <div class="badges">${badges(l, { complet: true })}</div>
         <dl class="faits">${faits(l).map(([k, x]) => `<div><dt>${esc(k)}</dt><dd>${x == null ? '<span class="inconnu">—</span>' : esc(x)}</dd></div>`).join('')}</dl>
 
-        <h3 class="sec">Suivi</h3>
-        <select class="suivi" data-id="${esc(l.id)}" aria-label="Suivi de contact">
-          <option value="">Pas encore contactée</option>${Object.entries(STATUTS_LIBELLES).map(([k, x]) => `<option value="${k}"${ct?.statut === k ? ' selected' : ''}>${esc(x)}</option>`).join('')}<option value="__aucun">— Retirer le suivi</option>
-        </select>
+        <h3 class="sec">Suivi</h3>${blocSuivi(l)}
+
+        ${loyer.length ? `<h3 class="sec">Le loyer en détail</h3><dl class="lignes-detail">${loyer.map(([k, x]) => `<div><dt>${esc(k)}</dt><dd>${esc(x)}</dd></div>`).join('')}</dl>` : ''}
+        ${histo.length ? `<h3 class="sec">Historique du prix</h3><ul class="histo">${histo.map((h, i) => `<li><span>${esc(jour(h.ts))}</span><b>${eur(h.prix)}</b>${i ? `<em class="${h.prix < histo[i - 1].prix ? 'baisse' : 'hausse'}">${h.prix < histo[i - 1].prix ? '↓' : '↑'} ${eur(Math.abs(h.prix - histo[i - 1].prix))}</em>` : ''}</li>`).join('')}</ul>` : ''}
 
         <h3 class="sec">${l.ok ? 'Pourquoi cet avis ?' : 'Pourquoi écartée ?'}</h3>${detail}
 
@@ -215,7 +250,7 @@ export function vueDetail(id) {
         <p class="pied-det">${esc(sourceAffichee(l))} · ${l.publishedAt ? 'publiée ' + depuis(l.publishedAt) : 'vue ' + depuis(l.first_seen)}</p>
       </div>
     </div>
-    <div class="det-cta"><a class="btn" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener noreferrer">Voir l'annonce ↗</a><button class="btn primary" type="button" data-contact-annonce="${esc(l.id)}">✉️ Contacter</button></div>`;
+    <div class="det-cta"><a class="btn" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener noreferrer">Voir l'annonce ↗</a><button class="btn primary" type="button" data-contact-annonce="${esc(l.id)}">${relance ? '✉️ Relancer' : '✉️ Contacter'}</button></div>`;
 }
 
 /** Met à jour, sans la redessiner, la feuille « Filtres » ouverte : compteur du bouton, compteurs des cases, valeurs des curseurs. */
@@ -232,3 +267,4 @@ export function majFeuilleFiltres(racine) {
   const o1 = racine.querySelector('#o-f-prix'); if (o1) o1.textContent = F.prixMax == null ? 'Aucun' : eur(F.prixMax);
   const o2 = racine.querySelector('#o-f-surf'); if (o2) o2.textContent = F.surfaceMin == null ? 'Aucune' : `${F.surfaceMin} m²`;
 }
+

@@ -158,6 +158,19 @@ em { font-style: normal; }
 @keyframes monte { from { transform: translateY(20px); opacity: 0; } }
 .det-barre { display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top)) 12px 8px; border-bottom: 1px solid var(--line); background: var(--bg); }
 .det-barre .coeur { position: static; margin-left: auto; box-shadow: none; border: 1px solid var(--line); background: var(--surface); }
+.rond.petit { width: 40px; height: 40px; font-size: 20px; }
+.rond:disabled { opacity: .35; }
+.det-nav { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.det-pos { min-width: 56px; text-align: center; font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; }
+.det-barre > .rond, .det-barre .coeur { flex: none; }
+.suivi-resume { background: color-mix(in srgb, var(--gold) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--gold) 40%, var(--line)); border-radius: var(--r-s); padding: 10px 14px; margin-bottom: 10px; font-size: 14px; }
+.suivi-resume.due { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--gold); }
+.suivi-resume small { display: block; color: var(--muted); margin-top: 2px; } .suivi-resume.due small { color: inherit; opacity: .8; } .suivi-resume p { margin: 6px 0 0; }
+.lignes-detail { margin: 0; display: grid; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-s); overflow: hidden; }
+.lignes-detail div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); } .lignes-detail div:first-child { border-top: 0; }
+.lignes-detail dt { color: var(--muted); } .lignes-detail dd { margin: 0; font-weight: 600; text-align: right; }
+.histo { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.histo li { display: flex; align-items: baseline; gap: 10px; } .histo span { color: var(--muted); min-width: 64px; } .histo em.baisse { color: var(--good); font-weight: 600; } .histo em.hausse { color: var(--danger); font-weight: 600; }
 .det-titre { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .det-defile { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
 .det-hero .tuile { height: 160px; }

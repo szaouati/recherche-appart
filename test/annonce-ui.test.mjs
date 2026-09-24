@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sourceAffichee, quartier, typeLogement, etageLibelle, prixM2, ligneInfos, baissePrix, teinte, badgesEquipements } from '../docs/js/annonce-ui.mjs';
+import { sourceAffichee, quartier, typeLogement, etageLibelle, prixM2, ligneInfos, baissePrix, teinte, badgesEquipements, infosLoyer, historiquePrix } from '../docs/js/annonce-ui.mjs';
 
 test('quartier : district de l\'API en priorité', () => {
   assert.equal(quartier({ district: 'La Chapelle - Marx Dormoy', arrondissement: 18 }), 'La Chapelle - Marx Dormoy');
@@ -50,4 +50,19 @@ test('baisse de prix et teinte stable', () => {
 test('badges d\'équipement', () => {
   const b = badgesEquipements({ furnished: true, features: { balcon: true, calme: true }, elevator: true, dpe: 'D' }).map((x) => x.t);
   assert.deepEqual(b, ['Meublé', 'Balcon', 'Ascenseur', 'DPE D', 'Calme']);
+});
+
+test('détail du loyer : seulement ce qui est connu', () => {
+  const t0 = new Date('2026-09-24T12:00:00Z').getTime();
+  assert.deepEqual(infosLoyer({}, t0), []);
+  assert.deepEqual(infosLoyer({ rent: 785, charges: 60, deposit: 785, agencyFee: 435, pro: true, availableDate: '2026-10-15' }, t0).map((x) => x[0]), ['Loyer hors charges', 'Charges', 'Dépôt de garantie', "Frais d'agence", 'Disponible', 'Annonceur']);
+  assert.deepEqual(infosLoyer({ charges: 0 }, t0), [['Charges', '0 €']]); // 0 est une vraie valeur connue
+  assert.equal(infosLoyer({ availableDate: '2026-01-01' }, t0)[0][1], 'Maintenant');
+  assert.deepEqual(infosLoyer({ availableDate: 'n\'importe quoi', pro: false }, t0), [['Annonceur', 'Particulier']]);
+});
+test('historique des prix : vide si le prix n\'a pas bougé', () => {
+  assert.deepEqual(historiquePrix({}), []);
+  assert.deepEqual(historiquePrix({ price_history: [['2026-09-01', 900]] }), []);
+  assert.deepEqual(historiquePrix({ price_history: [['2026-09-01', 900], ['2026-09-10', 900]] }), []);
+  assert.deepEqual(historiquePrix({ price_history: [['2026-09-01', 900], ['2026-09-10', 850]] }), [{ ts: '2026-09-01', prix: 900 }, { ts: '2026-09-10', prix: 850 }]);
 });

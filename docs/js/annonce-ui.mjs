@@ -63,3 +63,27 @@ export function badgesEquipements(l) {
   for (const [k, t] of [['lumineux', 'Lumineux'], ['calme', 'Calme'], ['traversant', 'Traversant'], ['cave', 'Cave'], ['parking', 'Parking'], ['parquet', 'Parquet']]) if (l.features?.[k]) b.push({ k, t });
   return b;
 }
+
+/** Détail du loyer : uniquement ce qui est connu (jamais de « 0 € » inventé). Renvoie [[libellé, valeur]]. */
+export function infosLoyer(l, maintenant = Date.now()) {
+  const eur = (n) => `${Math.round(Number(n)).toLocaleString('fr-FR')} €`;
+  const r = [];
+  if (l.rent != null && l.charges != null) r.push(['Loyer hors charges', eur(l.rent)], ['Charges', eur(l.charges)]);
+  else if (l.charges != null) r.push(['Charges', eur(l.charges)]);
+  if (l.deposit != null) r.push(['Dépôt de garantie', eur(l.deposit)]);
+  if (l.agencyFee) r.push(["Frais d'agence", eur(l.agencyFee)]);
+  if (l.availableDate) {
+    const d = new Date(l.availableDate);
+    if (!Number.isNaN(d.getTime())) r.push(['Disponible', d.getTime() <= maintenant ? 'Maintenant' : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })]);
+  }
+  if (l.pro === true) r.push(['Annonceur', 'Professionnel']);
+  else if (l.pro === false) r.push(['Annonceur', 'Particulier']);
+  return r;
+}
+
+/** Historique des prix [{ts, prix}] (du plus ancien au plus récent), seulement s'il a bougé. */
+export function historiquePrix(l) {
+  const h = Array.isArray(l.price_history) ? l.price_history.filter((x) => Array.isArray(x) && x[1] != null) : [];
+  if (h.length < 2 || new Set(h.map((x) => x[1])).size < 2) return [];
+  return h.map(([ts, prix]) => ({ ts, prix }));
+}

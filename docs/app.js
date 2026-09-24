@@ -2,9 +2,9 @@
 // les écrans dans js/vues.mjs, les cartes dans js/cartes.mjs, le chat dans js/chat.mjs.
 import { $, $$, eur, depuis } from './js/util.mjs';
 import { S, surChangement, emit, chargerTout, demarrerSynchro, appliquerEtat, annonceParId } from './js/etat.mjs';
-import { ui, htmlFiltres, majFeuilleFiltres, vueAnnonces, vueFavoris, vueSuivi, vuePlus, vueEcartees, vueCriteres, vueDetail, favoris, relancesDues, resumeCriteres, nouvelles } from './js/vues.mjs';
+import { ui, htmlFiltres, majFeuilleFiltres, listesAnnonces, listeSuivi, ecartees, vueAnnonces, vueFavoris, vueSuivi, vuePlus, vueEcartees, vueCriteres, vueDetail, favoris, relancesDues, resumeCriteres, nouvelles } from './js/vues.mjs';
 import { remplirFormulaire, brancherCriteres, formulaireActif } from './js/criteres.mjs';
-import { brancherBot, ouvrirBot, envoyerBot } from './js/chat.mjs';
+import { brancherBot, ouvrirBot, envoyerBot, copier } from './js/chat.mjs';
 import { brancherDialogs, ouvrirAjout, ouvrirDossier } from './js/dialogs.mjs';
 import { brancherMascotte, proposerBulleCriteres } from './js/mascotte.mjs';
 import { toast } from './js/toast.mjs';
@@ -60,6 +60,25 @@ function rendreVue({ force = false } = {}) {
   else if (fk) $(`[data-fk="${CSS.escape(fk)}"]`, racine)?.focus({ preventScroll: true });
 }
 
+/** Annonces de la liste qu'on parcourait quand on a ouvert la fiche (pour « précédente / suivante »). */
+function idsCourants() {
+  if (ongletCourant === 'favoris') return favoris().map((l) => l.id);
+  if (ongletCourant === 'suivi') return listeSuivi().map((l) => l.id);
+  if (ongletCourant === 'plus' && sousCourant === 'ecartees') return ecartees().map((l) => l.id);
+  if (ongletCourant === 'annonces' && S.charge) return listesAnnonces().liste.slice(0, ui.limite).map((l) => l.id);
+  return [];
+}
+function navDetail(id) {
+  const ids = idsCourants();
+  const index = ids.indexOf(id);
+  return index < 0 ? null : { index, total: ids.length, ids };
+}
+function voisine(delta) {
+  const nav = navDetail(route.annonce);
+  const cible = nav?.ids[nav.index + delta];
+  if (cible != null) location.replace(`#/annonce/${encodeURIComponent(cible)}`); // replace : « retour » ramène à la liste, pas à l'annonce d'avant
+}
+
 function rendreDetail() {
   const zone = $('#detail');
   const id = route.annonce;
@@ -70,7 +89,7 @@ function rendreDetail() {
   const defile = $('.det-defile', zone);
   const y = defile?.scrollTop ?? 0;
   const ouvertAvant = zone.dataset.id === id;
-  zone.innerHTML = vueDetail(id);
+  zone.innerHTML = vueDetail(id, navDetail(id));
   zone.dataset.id = id;
   if (ouvertAvant) $('.det-defile', zone).scrollTop = y; else $('.rond', zone)?.focus({ preventScroll: true });
   const l = annonceParId(id);
@@ -131,9 +150,13 @@ document.addEventListener('click', (e) => {
   const bc = t('[data-contact-annonce]');
   if (bc) {
     const l = annonceParId(bc.dataset.contactAnnonce);
-    if (l) { ouvrirBot(); envoyerBot(`Rédige-moi un message de contact pour cette annonce : ${eur(l.price)}${l.surface ? ` · ${l.surface} m²` : ''} · ${l.title ?? ''} (réf ${l.id}).`); }
+    if (l) { ouvrirBot(); envoyerBot(`Rédige-moi un message de ${S.contacts[l.id]?.statut === 'contacte' ? 'relance' : 'contact'} pour cette annonce : ${eur(l.price)}${l.surface ? ` · ${l.surface} m²` : ''} · ${l.title ?? ''} (réf ${l.id}).`); }
     return;
   }
+  const nav = t('[data-nav]');
+  if (nav) { voisine(Number(nav.dataset.nav)); return; }
+  const part = t('[data-partager]');
+  if (part) { partager(part.dataset.partager); return; }
   const bm = t('[data-mascotte-annonce]');
   if (bm) {
     const l = annonceParId(bm.dataset.mascotteAnnonce);
@@ -213,8 +236,32 @@ document.addEventListener('error', (e) => {
   const img = e.target;
   if (img?.tagName === 'IMG' && img.classList.contains('photo-img')) img.outerHTML = img.dataset.tuile;
 }, true);
-// Échap ferme le détail (bureau).
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && route.annonce && !document.querySelector('dialog[open]')) fermerDetail(); });
+// Partager l'annonce d'origine (feuille de partage du téléphone) ; à défaut, copie du lien.
+async function partager(id) {
+  const l = annonceParId(id);
+  if (!l?.url) return;
+  const titre = `${quartier(l)}${l.price != null ? ' · ' + eur(l.price) : ''}`;
+  if (navigator.share) { try { await navigator.share({ title: titre, text: titre, url: l.url }); } catch { /* annulé */ } return; }
+  toast(await copier(l.url) ? 'Lien de l\'annonce copié' : 'Copie impossible : ouvre l\'annonce et partage-la de là');
+}
+// Glisser à l'horizontale sur la fiche = annonce précédente / suivante (téléphone).
+{
+  let dep = null;
+  const zone = $('#detail');
+  zone.addEventListener('touchstart', (e) => { dep = e.target.closest('textarea, input, select') || e.touches.length > 1 ? null : [e.touches[0].clientX, e.touches[0].clientY]; }, { passive: true });
+  zone.addEventListener('touchend', (e) => {
+    if (!dep) return;
+    const dx = e.changedTouches[0].clientX - dep[0], dy = e.changedTouches[0].clientY - dep[1];
+    dep = null;
+    if (Math.abs(dx) > 90 && Math.abs(dy) < 50) voisine(dx < 0 ? 1 : -1);
+  }, { passive: true });
+}
+// Échap ferme le détail ; ← / → parcourent les annonces (bureau).
+document.addEventListener('keydown', (e) => {
+  if (!route.annonce || document.querySelector('dialog[open]')) return;
+  if (e.key === 'Escape') fermerDetail();
+  else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !e.target.closest?.('textarea, input, select')) voisine(e.key === 'ArrowRight' ? 1 : -1);
+});
 
 // --- Démarrage ---------------------------------------------------------------
 surChangement((motif) => {

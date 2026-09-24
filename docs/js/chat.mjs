@@ -61,7 +61,7 @@ const CANAUX = { messagerie_annonce: "messagerie de l'annonce", email: 'e-mail',
 
 // Copie dans le presse-papiers ; renvoie false si le navigateur refuse (permission, iOS…) pour que l'appelant
 // puisse le dire à Tabatha au lieu d'échouer en silence.
-async function copier(texte, source) {
+export async function copier(texte, source) {
   try {
     if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(texte); return true; }
   } catch { /* on tente le repli */ }
