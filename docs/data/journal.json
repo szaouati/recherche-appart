@@ -2436,6 +2436,53 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:45:26.218Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Quels favoris n'ai-je pas encore contactés ?",
+      "reply": "Tu n'as actuellement **aucun favori** enregistré, donc je ne peux pas te dire lesquels ne sont pas contactés 🙂\n\nSi tu veux, je peux te lister les meilleures annonces du moment (pour le 18e) et tu me dis lesquelles mettre en favoris ?",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "list_listings",
+        "get_contact_board"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
