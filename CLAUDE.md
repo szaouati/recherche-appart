@@ -122,6 +122,9 @@ de vraies offres de location longue durée. À écarter d'office (et à retirer 
 - **échange d'appartement** (souvent avec une exigence, ex. ascenseur, que l'appart de Tabatha n'a pas) ;
 - **occupant présent** qui propose de louer « quand il n'est pas là » ;
 - **annonce désactivée**.
+- **chambre étudiante en résidence étudiante** / **bail étudiant 9 mois** (pas de vrai bail classique) ;
+- **lien qui ne mène pas à l'annonce** (page de recherche, annonce introuvable) : inutilisable pour Tabatha.
+Un RDC est un « bof » assumé par Sacha (ex. RDC sur cour sans grande fenêtre) : on l'exclut de toute façon par son critère.
 Un prix très inférieur au marché (< ~700 € pour 20 m² dans le 18e) sur Leboncoin, surtout d'un particulier, est le
 signal le plus fréquent de ces cas : ne pas le mettre en tête de liste. Le texte des annonces Leboncoin n'est pas
 lisible automatiquement (captcha) : les détails viennent du PDF (carte seulement), donc **présenter le brouillon à
