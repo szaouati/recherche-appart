@@ -2117,6 +2117,56 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:08:25.477Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Rédige un message pour contacter la première de mes meilleures annonces",
+      "reply": "Voilà, le message est prêt à valider 📩 Il se présente, demande une visite avec tes disponibilités, et pose deux questions utiles (date d'entrée + charges). Tu n'as plus qu'à taper pour valider et l'envoyer toi-même depuis l'annonce.",
+      "proposal": null,
+      "propositions": [
+        "message"
+      ],
+      "outils": [
+        "list_listings",
+        "assess_risk",
+        "propose_contact_message"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
