@@ -3,6 +3,25 @@
   "notes": {},
   "manuel": [
     {
+      "id": "manuel:1790233633642",
+      "source": "Manuel",
+      "url": "https://www.leboncoin.fr/ad/locations/3275595375",
+      "title": "Leboncoin — 850€, 20m², 1p — La Fourche-Guy Moquet",
+      "price": 850,
+      "surface": 20,
+      "rooms": 1,
+      "arrondissement": 18,
+      "floor": 5,
+      "elevator": null,
+      "dpe": null,
+      "furnished": null,
+      "features": {},
+      "first_seen": "2026-09-24T07:07:13.642Z",
+      "last_seen": "2026-09-24T07:07:13.642Z",
+      "publishedAt": "2026-09-24T07:07:13.642Z",
+      "photo": null
+    },
+    {
       "id": "manuel:1790233631919",
       "source": "Manuel",
       "url": "https://www.leboncoin.fr/ad/locations/3275598896",
@@ -557,5 +576,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T07:07:12.185Z"
+  "updatedAt": "2026-09-24T07:07:15.298Z"
 }
