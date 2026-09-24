@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { remplirMarqueurs, construireIcs, relanceDue, libelleRelance, STATUTS_LIBELLES } from '../docs/agent-ui.mjs';
+import { formaterReponse, remplirMarqueurs, construireIcs, relanceDue, libelleRelance, STATUTS_LIBELLES } from '../docs/agent-ui.mjs';
 
 test('remplirMarqueurs : remplace par « Mon dossier », signale ce qui manque, n\'invente rien', () => {
   const { texte, manquants } = remplirMarqueurs('Bonjour, je suis {{situation}}. Merci, {{prenom}} — {{telephone}} — {{iban}}', { prenom: 'Tabatha', situation: 'étudiante en master' });
@@ -48,4 +48,12 @@ test('relances : due seulement si la date est passée et le dossier encore actif
 
 test('statuts : libellés pour tous les statuts du Worker', () => {
   for (const s of ['a_contacter', 'contacte', 'reponse', 'visite', 'refuse', 'sans_suite']) assert.ok(STATUTS_LIBELLES[s]);
+});
+
+test('formaterReponse : gras et tableaux lisibles, HTML toujours échappé', () => {
+  assert.equal(formaterReponse('Il reste **21** annonces'), 'Il reste <b>21</b> annonces');
+  assert.equal(formaterReponse('<img src=x onerror=alert(1)> **ok**'), '&lt;img src=x onerror=alert(1)&gt; <b>ok</b>');
+  const t = formaterReponse('| Annonce | Prix |\n|---|---|\n| A | 550 € |');
+  assert.equal(t, 'Annonce · Prix\nA · 550 €');
+  assert.equal(formaterReponse('- un\n- deux'), '- un\n- deux');
 });

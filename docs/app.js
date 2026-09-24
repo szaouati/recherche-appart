@@ -1,5 +1,5 @@
 import { CRITERES, mergeCriteria, rankListings, verdictScore, estVisible } from './score.mjs';
-import { STATUTS_LIBELLES, MARQUEURS, remplirMarqueurs, construireIcs, relanceDue, libelleRelance } from './agent-ui.mjs';
+import { STATUTS_LIBELLES, MARQUEURS, remplirMarqueurs, construireIcs, relanceDue, libelleRelance, formaterReponse } from './agent-ui.mjs';
 
 const $ = (s, r = document) => r.querySelector(s);
 const store = {
@@ -483,7 +483,7 @@ let derniereProposition = null;
 function dessinerBotLog() {
   const log = $('#bot-log');
   log.innerHTML = botChat.length
-    ? botChat.map((m) => `<div class="bot-msg ${m.role === 'user' ? 'user' : 'bot'}">${esc(m.content)}</div>`).join('')
+    ? botChat.map((m) => `<div class="bot-msg ${m.role === 'user' ? 'user' : 'bot'}">${m.role === 'user' ? esc(m.content) : formaterReponse(m.content)}</div>`).join('')
     : '<p class="hint">Dis-moi ce que tu veux changer : « baisse le budget à 850 », « ajoute le 19e en préféré », « le parquet ne compte plus »…</p>';
   log.scrollTop = log.scrollHeight;
 }

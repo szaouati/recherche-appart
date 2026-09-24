@@ -85,3 +85,17 @@ export function libelleRelance(contact, maintenant = Date.now()) {
   if (jours <= 0) return 'relance à faire';
   return jours === 1 ? 'relance demain' : `relance dans ${jours} j`;
 }
+
+const echapperHtml = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+/**
+ * Rendu léger (et sûr) de la réponse du bot : le texte est d'abord échappé, puis seuls le **gras** et les
+ * tableaux markdown sont traités (le modèle en met parfois malgré la consigne). Un tableau devient une ligne
+ * par rang, cellules séparées par « · » ; la ligne de séparation `|---|---|` est supprimée.
+ */
+export function formaterReponse(texte) {
+  const lignes = String(texte ?? '').split('\n')
+    .filter((l) => !/^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l) || !l.includes('|'))
+    .map((l) => (/^\s*\|.*\|\s*$/.test(l) ? l.trim().slice(1, -1).split('|').map((c) => c.trim()).join(' · ') : l));
+  return echapperHtml(lignes.join('\n')).replace(/\*\*([^*\n]+?)\*\*/g, '<b>$1</b>');
+}
