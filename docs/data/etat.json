@@ -288,27 +288,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790178254428",
-      "source": "Manuel",
-      "url": "https://www.leboncoin.fr/ad/locations/3266096165",
-      "title": "Leboncoin (recherche) — 900€, 14m², 1p — Jules Joffrin, balcon",
-      "price": 900,
-      "surface": 14,
-      "rooms": 1,
-      "arrondissement": 18,
-      "floor": 1,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {
-        "balcon": true
-      },
-      "first_seen": "2026-09-23T15:44:14.428Z",
-      "last_seen": "2026-09-23T15:44:14.428Z",
-      "publishedAt": "2026-09-23T15:44:14.428Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790178251498",
       "source": "Manuel",
       "url": "https://www.leboncoin.fr/ad/locations/3200973520",
@@ -424,5 +403,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T10:33:38.928Z"
+  "updatedAt": "2026-09-24T10:33:40.403Z"
 }
