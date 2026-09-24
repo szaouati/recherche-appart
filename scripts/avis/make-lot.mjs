@@ -9,7 +9,10 @@ const e = JSON.parse(fs.readFileSync('docs/data/etat.json', 'utf8'));
 const crit = JSON.parse(fs.readFileSync('docs/criteria.json', 'utf8'));
 const lastFull = d.meta.lastFullAt;
 // Même définition d'« annonce visible » que le site (docs/app.js, actives()).
-const actives = (l) => l.source === 'Manuel' || (!l.dupOf && !l.retire && (!lastFull || new Date(l.last_seen) > new Date(new Date(lastFull).getTime() - 48 * 36e5)));
+const SOURCES_EMAIL = ['SeLoger', 'Leboncoin', 'PAP'];
+const actives = (l) => l.source === 'Manuel' || (!l.dupOf && !l.retire && (SOURCES_EMAIL.includes(l.source)
+  ? Date.now() - new Date(l.last_seen).getTime() < 10 * 864e5
+  : !lastFull || new Date(l.last_seen) > new Date(new Date(lastFull).getTime() - 48 * 36e5)));
 const { listings } = rankListings([...e.manuel, ...d.listings], crit);
 const lot = listings.filter((l) => l.ok && actives(l) && !exclus.has(l.id) && e.statut[l.id] !== 'ecarte');
 

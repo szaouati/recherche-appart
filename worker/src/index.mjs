@@ -9,6 +9,7 @@
 // fichiers du dépôt avec son propre jeton GitHub (jamais exposé au navigateur) et sert d'arbitre
 // unique en cas d'écritures concurrentes (retry-once-on-409, comme le journal).
 import { CRITERES, mergeCriteria } from '../../docs/score.mjs';
+import { cleAnnonce } from '../../collector/lib/cle-annonce.mjs';
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 700;
@@ -148,13 +149,15 @@ const TYPES_EVENEMENT = ['fav', 'ecarte', 'note', 'critere_change', 'ajout_manue
 // « docs/data/etat.json » introuvable (ou illisible) se retrouveraient à muter le MÊME objet en
 // mémoire, et donc à mélanger leurs données. `etatPropre` fait pareil par précaution : elle ne
 // renvoie jamais telles quelles les sous-structures de `data`, toujours des copies fraîches.
-const etatVide = () => ({ statut: {}, notes: {}, manuel: [], vuJusqua: null });
+const etatVide = () => ({ statut: {}, notes: {}, manuel: [], rejetes: [], vuJusqua: null });
 
 function etatPropre(data) {
   return {
     statut: data?.statut && typeof data.statut === 'object' ? { ...data.statut } : {},
     notes: data?.notes && typeof data.notes === 'object' ? { ...data.notes } : {},
     manuel: Array.isArray(data?.manuel) ? [...data.manuel] : [],
+    // Clés (cleAnnonce) des annonces retirées par Sacha : la collecte par e-mail ne doit pas les ramener.
+    rejetes: Array.isArray(data?.rejetes) ? [...data.rejetes] : [],
     vuJusqua: typeof data?.vuJusqua === 'string' ? data.vuJusqua : null,
   };
 }
@@ -318,7 +321,10 @@ export default {
           if (!id) return json({ error: 'id manquant' }, 400, headers);
           let existait = false;
           etat = await ecrireEtatMute(env, (e) => {
-            existait = e.manuel.some((x) => x.id === id);
+            const l = e.manuel.find((x) => x.id === id);
+            existait = Boolean(l);
+            const cle = l && cleAnnonce(l.url);
+            if (cle && !e.rejetes.includes(cle)) e.rejetes = [...e.rejetes, cle].slice(-1000);
             e.manuel = e.manuel.filter((x) => x.id !== id);
             delete e.statut[id];
             delete e.notes[id];

@@ -1,7 +1,6 @@
 // Source : alertes reçues par e-mail sur alertes.appart.tabatha@gmail.com (IMAP Gmail).
-// Actuellement : SeLoger uniquement (collector/lib/parse-seloger-email.mjs, format décodé le
-// 23/09/2026 sur de vrais e-mails). PAP et Leboncoin : pas encore de format décodé (aucune vraie
-// alerte PAP reçue à ce jour) — voir CLAUDE.md § pipeline e-mail avant d'en ajouter.
+// SeLoger (format décodé le 23/09/2026), Leboncoin et PAP (décodés le 24/09/2026), chacun sur de vrais
+// e-mails : voir collector/lib/parse-*-email.mjs et CLAUDE.md § pipeline e-mail avant d'en ajouter.
 //
 // Contrairement à Bien'ici, cette source est incrémentale : elle ne relit que les e-mails non lus
 // (IMAP \Seen) et les marque lus une fois traités (succès ou échec — un e-mail cassé ne doit pas
@@ -11,6 +10,8 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { parseSeLoger, resoudreLienSeLoger } from '../lib/parse-seloger-email.mjs';
+import { parseLeboncoin } from '../lib/parse-leboncoin-email.mjs';
+import { parsePap } from '../lib/parse-pap-email.mjs';
 import { extractFeatures } from '../lib/features.mjs';
 
 const MAX_MESSAGES_PAR_PASSAGE = 30; // borne le temps d'exécution ; le reste attend le passage suivant
@@ -53,6 +54,65 @@ async function normaliserSeLoger(brut, dateEmail) {
   };
 }
 
+async function normaliserLeboncoin(brut, dateEmail) {
+  const arrondissement = arrondissementDepuisCodePostal(brut.postalCode);
+  const title = `${brut.type}${brut.rooms ? ` ${brut.rooms} p.` : ''} ${brut.surface} m²${brut.district ? ` — ${brut.district}` : ''}`;
+  return {
+    id: `leboncoin:${brut.id}`,
+    source: 'Leboncoin',
+    url: `https://www.leboncoin.fr/ad/locations/${brut.id}`,
+    title,
+    price: brut.price,
+    surface: brut.surface,
+    rooms: brut.rooms,
+    floor: null, // l'alerte ne donne pas l'étage (le PDF du matin, si)
+    elevator: null,
+    furnished: brut.furnished,
+    postalCode: brut.postalCode,
+    arrondissement,
+    district: brut.district,
+    photo: brut.photo,
+    dpe: null,
+    agencyFee: null,
+    deposit: null,
+    pro: brut.pro,
+    availableDate: null,
+    publishedAt: (dateEmail ?? new Date()).toISOString(),
+    description: title,
+    features: extractFeatures(title, ''), // « Colocation », « Chambre »… dans le type sont repérés ici
+    texteLimite: true,
+  };
+}
+
+async function normaliserPap(brut, dateEmail) {
+  const title = `Location appartement ${brut.rooms} p. ${brut.surface} m² — Paris ${brut.arrondissement ?? '?'}e`;
+  return {
+    id: `pap:${brut.id}`,
+    source: 'PAP',
+    url: brut.url,
+    title,
+    price: brut.price,
+    surface: brut.surface,
+    rooms: brut.rooms,
+    floor: null,
+    elevator: null,
+    furnished: null,
+    postalCode: brut.arrondissement ? `750${String(brut.arrondissement).padStart(2, '0')}` : null,
+    arrondissement: brut.arrondissement,
+    district: null,
+    photo: brut.photo,
+    dpe: null,
+    agencyFee: null,
+    deposit: null,
+    pro: false, // PAP = particulier à particulier
+    availableDate: null,
+    publishedAt: (dateEmail ?? new Date()).toISOString(),
+    description: title,
+    features: extractFeatures(title, ''),
+    texteLimite: true,
+  };
+}
+
 export async function fetchEmail(_criteria, { log = console.log } = {}) {
   const user = process.env.IMAP_USER;
   const pass = process.env.IMAP_APP_PASSWORD;
@@ -73,7 +133,7 @@ export async function fetchEmail(_criteria, { log = console.log } = {}) {
   try {
     const lock = await client.getMailboxLock('INBOX');
     try {
-      const traiter = async (expediteur, analyser, nomSource) => {
+      const traiter = async (expediteur, analyser, nomSource, normaliser) => {
         let uids;
         try {
           uids = await client.search({ from: expediteur, seen: false });
@@ -91,7 +151,7 @@ export async function fetchEmail(_criteria, { log = console.log } = {}) {
             const brutes = analyser(parsed.html || '');
             for (const brut of brutes) {
               try {
-                items.push(await normaliserSeLoger(brut, parsed.date));
+                items.push(await normaliser(brut, parsed.date));
               } catch (e) {
                 warnings.push(`${nomSource} (uid ${uid}) : ${e.message}`);
               }
@@ -106,8 +166,9 @@ export async function fetchEmail(_criteria, { log = console.log } = {}) {
         }
       };
 
-      await traiter('annonces@alertes.seloger.com', parseSeLoger, 'SeLoger');
-      // PAP/Leboncoin : à ajouter ici une fois leur format décodé sur un vrai e-mail (voir CLAUDE.md).
+      await traiter('annonces@alertes.seloger.com', parseSeLoger, 'SeLoger', normaliserSeLoger);
+      await traiter('no.reply@leboncoin.fr', parseLeboncoin, 'Leboncoin', normaliserLeboncoin);
+      await traiter('users-alertes@pap.fr', parsePap, 'PAP', normaliserPap);
     } finally {
       lock.release();
     }

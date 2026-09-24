@@ -128,6 +128,14 @@ test('supprimer_manuel : retire l\'annonce et ses favoris/notes, sans toucher au
   assert.equal(r.body.notes[idA], undefined);
 });
 
+test('supprimer_manuel : mémorise la clé de l\'annonce dans `rejetes` (pour que l\'e-mail ne la ramène pas)', async () => {
+  const env = creerEnvDeTest();
+  env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });
+  const a = await env.post({ kind: 'etat', action: 'ajouter_manuel', listing: { url: 'https://www.leboncoin.fr/ad/locations/3275598896', price: 750 }, criteria: {} });
+  const r = await env.post({ kind: 'etat', action: 'supprimer_manuel', id: a.body.manuel[0].id });
+  assert.deepEqual(r.body.rejetes, ['lbc:3275598896']);
+});
+
 test('supprimer_manuel : id inconnu → 404', async () => {
   const env = creerEnvDeTest();
   env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });

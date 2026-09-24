@@ -8,11 +8,13 @@ import { fileURLToPath } from 'node:url';
 import { mergeCriteria, rankListings } from '../docs/score.mjs';
 import { fetchBienici, verifierDisponibilite } from './sources/bienici.mjs';
 import { fetchEmail } from './sources/email.mjs';
+import { cleAnnonce } from './lib/cle-annonce.mjs';
 import { formatAlert, sendTelegram, telegramConfigured } from './notify.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CRITERIA_FILE = path.join(ROOT, 'docs/criteria.json');
 const DB_FILE = path.join(ROOT, 'docs/data/listings.json');
+const ETAT_FILE = path.join(ROOT, 'docs/data/etat.json');
 
 const args = process.argv.slice(2);
 const DRY = args.includes('--dry');
@@ -83,6 +85,17 @@ async function main() {
       statuts.push({ name: src.name, status: 'erreur', count: 0, error: e.message });
     }
   }
+
+  // Une annonce déjà ajoutée à la main (export PDF du matin) ou retirée par Sacha (`rejetes`) ne doit pas
+  // revenir par e-mail : on la reconnaît à son identifiant dans l'URL (cleAnnonce).
+  const etat = await readJson(ETAT_FILE, {});
+  const dejaTraitees = new Set([...(etat.manuel ?? []).map((l) => cleAnnonce(l.url)), ...(etat.rejetes ?? [])].filter(Boolean));
+  const avant = fresh.length;
+  for (let i = fresh.length - 1; i >= 0; i--) {
+    const cle = cleAnnonce(fresh[i].url);
+    if (cle && dejaTraitees.has(cle)) fresh.splice(i, 1);
+  }
+  if (fresh.length < avant) console.log(`  ${avant - fresh.length} annonce(s) ignorée(s) : déjà ajoutée(s) à la main ou rejetée(s).`);
 
   // Fusion : on conserve first_seen, l'historique de prix et le drapeau « notifié ».
   const nouveaux = [];
