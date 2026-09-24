@@ -2068,6 +2068,55 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:08:10.520Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Garde mes 2 meilleures annonces",
+      "reply": "C'est envoyé ✨ Tu n'as plus qu'à valider d'un tap pour les ajouter à tes favoris. Dis-moi si tu veux que je regarde autre chose sur ces deux annonces (risques, message de contact...).",
+      "proposal": null,
+      "propositions": [
+        "actions"
+      ],
+      "outils": [
+        "list_listings",
+        "propose_listing_actions"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
