@@ -211,7 +211,7 @@ const num = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null 
 function construireAnnonceManuelle(l) {
   const now = new Date().toISOString();
   return {
-    id: `manuel:${Date.now()}`,
+    id: `manuel:${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     source: 'Manuel',
     url: typeof l?.url === 'string' ? l.url.slice(0, 500) : '',
     title: l?.title ? String(l.title).slice(0, 200) : null,
@@ -312,6 +312,18 @@ export default {
           etat = await ecrireEtatMute(env, (e) => { e.manuel.unshift(listing); e.manuel = e.manuel.slice(0, 200); });
           journalType = 'ajout_manuel';
           journalPayload = { url: listing.url, title: listing.title, price: listing.price };
+        } else if (body.action === 'supprimer_manuel') {
+          // Retire une annonce ajoutée à la main devenue indisponible (louée, retirée), et les
+          // favoris/notes qui lui étaient attachés. Réversible via l'historique git.
+          if (!id) return json({ error: 'id manquant' }, 400, headers);
+          let existait = false;
+          etat = await ecrireEtatMute(env, (e) => {
+            existait = e.manuel.some((x) => x.id === id);
+            e.manuel = e.manuel.filter((x) => x.id !== id);
+            delete e.statut[id];
+            delete e.notes[id];
+          });
+          if (!existait) return json({ error: 'Annonce manuelle introuvable' }, 404, headers);
         } else if (body.action === 'modifier_manuel') {
           // Corrige un champ d'une annonce déjà ajoutée à la main (typiquement son url, quand on a
           // pu récupérer le vrai lien après coup — ex. Leboncoin, dont le captcha empêche de le

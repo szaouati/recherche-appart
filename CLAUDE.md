@@ -100,7 +100,10 @@ Sacha dépose chaque matin des PDF exportés depuis son Chrome (Leboncoin est ve
 d'accès automatisé). Méthode et pièges : `scripts/import-pdf/README.md`. Règles clés : **ajout uniquement**
 (jamais supprimer/écraser les annonces des jours précédents — Tabatha n'a peut-être pas encore consulté l'appli),
 dédoublonner face à `etat.json` + `listings.json`, ne pas toucher à `vuJusqua`, résumer à Sacha ce qui est nouveau,
-ce qui est un doublon, et ce qui a disparu des exports (à signaler, pas à supprimer).
+ce qui est un doublon, et ce qui a disparu des exports. **Retirer systématiquement** (décision de Sacha le 24/09/2026)
+les annonces manuelles absentes des exports du jour dès qu'on est sûr qu'elles ne sont plus disponibles : action
+`supprimer_manuel` du Worker (retire aussi favoris/notes liés ; réversible via git). Si l'annonce a un favori ou une note,
+le signaler à Sacha avant de retirer. Le message WhatsApp du matin suit le runbook « top 10 » (ton chocola, emojis).
 
 ## Règles non négociables
 

@@ -113,6 +113,28 @@ test('modifier_manuel : corrige un champ (ex. url) d\'une annonce déjà ajouté
   assert.equal(r.body.manuel[0].price, 800, 'les autres champs restent inchangés');
 });
 
+test('supprimer_manuel : retire l\'annonce et ses favoris/notes, sans toucher aux autres', async () => {
+  const env = creerEnvDeTest();
+  env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });
+  const a = await env.post({ kind: 'etat', action: 'ajouter_manuel', listing: { url: 'https://x/a', price: 700 }, criteria: {} });
+  const b = await env.post({ kind: 'etat', action: 'ajouter_manuel', listing: { url: 'https://x/b', price: 800 }, criteria: {} });
+  const idA = a.body.manuel[0].id;
+  const idB = b.body.manuel[0].id;
+  await env.post({ kind: 'etat', action: 'set_statut', id: idA, valeur: 'fav', criteria: {} });
+  await env.post({ kind: 'etat', action: 'set_note', id: idA, texte: 'à visiter', criteria: {} });
+  const r = await env.post({ kind: 'etat', action: 'supprimer_manuel', id: idA });
+  assert.deepEqual(r.body.manuel.map((x) => x.id), [idB]);
+  assert.equal(r.body.statut[idA], undefined);
+  assert.equal(r.body.notes[idA], undefined);
+});
+
+test('supprimer_manuel : id inconnu → 404', async () => {
+  const env = creerEnvDeTest();
+  env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });
+  const r = await env.post({ kind: 'etat', action: 'supprimer_manuel', id: 'manuel:inexistant' });
+  assert.equal(r.status, 404);
+});
+
 test('modifier_manuel : id inconnu → 404, n\'écrit rien', async () => {
   const env = creerEnvDeTest();
   env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });
