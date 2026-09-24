@@ -1846,6 +1846,182 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T10:31:59.799Z",
+      "kind": "event",
+      "type": "avis",
+      "payload": {
+        "sujet": "relecture_lot",
+        "lot": "2026-09-24T09:31:35.028Z",
+        "partie": "1/1",
+        "reponses": [
+          {
+            "id": "seloger:26WF5AYKMMDH",
+            "p": 900,
+            "v": "bof",
+            "c": "rdc sur cour, pas de grande fenetre"
+          },
+          {
+            "id": "manuel:1790178435018",
+            "p": 800,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790178237212",
+            "p": 850,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790233639429",
+            "p": 770,
+            "v": "non",
+            "r": [
+              "Désactivée / louée"
+            ]
+          },
+          {
+            "id": "manuel:1790233631919",
+            "p": 750,
+            "v": "non",
+            "r": [
+              "Sous-loc courte"
+            ]
+          },
+          {
+            "id": "manuel:1790178011317",
+            "p": 763,
+            "v": "non",
+            "c": "bail étudiant 9 mois (pas un bail classique)"
+          },
+          {
+            "id": "manuel:1790233633642",
+            "p": 850,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790178428971",
+            "p": 810,
+            "v": "bof",
+            "c": "https://www.seloger.com/annonce/location/ile-de-france/paris-75/paris-75000/26X3JSUF4KM5?serp_view=list&search=distributionTypes%3DRent%26estateTypes%3DApartment%26locations%3DPOCOFR4812%26priceMax%3D"
+          },
+          {
+            "id": "manuel:1790178251498",
+            "p": 790,
+            "v": "bof",
+            "c": "chambre étudiante dans résidence étudiante : pas bon du tout"
+          },
+          {
+            "id": "manuel:1790178254428",
+            "p": 900,
+            "v": "non",
+            "c": "Je propose mon studio meublé en sous-location pendant certaines périodes où je suis en déplacement."
+          },
+          {
+            "id": "manuel:1790178431865",
+            "p": 850,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790178008804",
+            "p": 840,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790178437700",
+            "p": 845,
+            "v": "non",
+            "c": "pas trouvé l'annonce..."
+          },
+          {
+            "id": "manuel:1790178260639",
+            "p": 880,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790233642001",
+            "p": 699,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790178427040",
+            "p": 850,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790178264354",
+            "p": 799,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790178262556",
+            "p": 900,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790178257299",
+            "p": 850,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790242242821-vlym",
+            "p": 641,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790233644777",
+            "p": 750,
+            "v": "ok"
+          },
+          {
+            "id": "manuel:1790178266205",
+            "p": 825,
+            "v": "ok"
+          }
+        ],
+        "manque": [
+          "Lien direct vers l'annonce",
+          "Photos",
+          "Date de publication",
+          "Texte de l'annonce"
+        ],
+        "remarque": ""
+      },
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 45
+      }
     }
   ]
 }
