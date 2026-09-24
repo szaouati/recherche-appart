@@ -11,13 +11,21 @@ function creerEnvDeTest() {
   const b64 = (s) => Buffer.from(s, 'utf8').toString('base64');
   const db64 = (s) => Buffer.from(s, 'base64').toString('utf8');
 
+  let modeleScripte = null;
   globalThis.fetch = async (url, opts = {}) => {
     const u = new URL(url);
+    if (u.hostname === 'api.anthropic.com') {
+      if (!modeleScripte) throw new Error('Anthropic non scripté');
+      const corps = JSON.parse(opts.body);
+      const contenu = modeleScripte(corps);
+      return new Response(JSON.stringify({ content: contenu, stop_reason: contenu.some((b) => b.type === 'tool_use') ? 'tool_use' : 'end_turn' }), { status: 200 });
+    }
     if (u.hostname !== 'api.github.com') throw new Error('fetch non simulé : ' + url);
     const path = decodeURIComponent(u.pathname.split('/contents/')[1]);
     if (!opts.method || opts.method === 'GET') {
       const f = fichiers.get(path);
       if (!f) return { status: 404, ok: false, json: async () => ({}) };
+      if (/raw/.test(opts.headers?.Accept ?? '')) return { status: 200, ok: true, json: async () => f.content };
       return { status: 200, ok: true, json: async () => ({ sha: f.sha, content: b64(JSON.stringify(f.content)) }) };
     }
     if (opts.method === 'PUT') {
@@ -52,6 +60,8 @@ function creerEnvDeTest() {
   return {
     fichiers,
     definirConflit: (n) => { conflitSimule = n; },
+    definirModele: (fn) => { modeleScripte = fn; },
+    env,
     async post(body) {
       const req = new Request('https://worker.test/', { method: 'POST', headers: HEADERS, body: JSON.stringify(body) });
       const res = await worker.fetch(req, env, ctx);
@@ -185,4 +195,76 @@ test('origine non autorisée et jeton invalide sont rejetés', async () => {
   assert.equal(r1.status, 403);
   const r2 = await env.requeteBrute({ Origin: 'https://example.test', 'X-App-Token': 'MAUVAIS' });
   assert.equal(r2.status, 401);
+});
+
+// ---- Suivi de contact ---------------------------------------------------------------------------------
+test('set_contact : enregistre le statut avec une relance, journalise, et le retire avec statut null', async () => {
+  const env = creerEnvDeTest();
+  env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });
+  const r = await env.post({ kind: 'etat', action: 'set_contact', id: 'manuel:1', statut: 'contacte', note: 'Message envoyé sur Leboncoin', relance_jours: 3, canal: 'messagerie_annonce', url: 'https://x', criteria: {} });
+  const c = r.body.contacts['manuel:1'];
+  assert.equal(c.statut, 'contacte');
+  assert.equal(c.canal, 'messagerie_annonce');
+  const jours = (Date.parse(c.relance) - Date.now()) / 864e5;
+  assert.ok(jours > 2.9 && jours < 3.1, 'relance à J+3');
+  const j = env.fichiers.get('docs/data/journal.json').content.entries.at(-1);
+  assert.equal(j.type, 'contact');
+  assert.equal(j.payload.statut, 'contacte');
+  assert.ok(!JSON.stringify(j).includes('Message envoyé'), 'la note (potentiellement personnelle) ne va pas au journal public');
+
+  const r2 = await env.post({ kind: 'etat', action: 'set_contact', id: 'manuel:1', statut: null, criteria: {} });
+  assert.equal(r2.body.contacts['manuel:1'], undefined);
+});
+
+test('set_contact : un statut inconnu vaut « retirer » ; une visite fixe la date sans relance', async () => {
+  const env = creerEnvDeTest();
+  env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });
+  await env.post({ kind: 'etat', action: 'set_contact', id: 'a', statut: 'contacte', relance_jours: 2, criteria: {} });
+  const r = await env.post({ kind: 'etat', action: 'set_contact', id: 'a', statut: 'visite', visite: '2026-10-01T16:30:00Z', criteria: {} });
+  assert.equal(r.body.contacts.a.statut, 'visite');
+  assert.equal(r.body.contacts.a.visite, '2026-10-01T16:30:00.000Z');
+  assert.equal(r.body.contacts.a.relance, null, 'plus de relance une fois la visite fixée');
+  const r2 = await env.post({ kind: 'etat', action: 'set_contact', id: 'a', statut: 'BIDON', criteria: {} });
+  assert.equal(r2.body.contacts.a, undefined);
+});
+
+// ---- Chat de bout en bout -------------------------------------------------------------------------------
+test('chat : requête → agent (outil de lecture puis réponse) → journal ; propositions renvoyées au navigateur', async () => {
+  const env = creerEnvDeTest();
+  const now = new Date().toISOString();
+  env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });
+  env.fichiers.set('docs/data/listings.json', { sha: 's1', content: { meta: { lastFullAt: now }, listings: [
+    { id: 'bienici:x1', source: "Bien'ici", url: 'https://ex.test/x1', price: 700, surface: 20, rooms: 1, floor: 3, dpe: 'C', arrondissement: 18, first_seen: now, last_seen: now, features: {}, title: 'Studio' },
+  ] } });
+  let tour = 0;
+  env.definirModele((corps) => {
+    tour++;
+    assert.ok(corps.tools.length >= 10, 'tous les outils sont envoyés');
+    if (tour === 1) return [{ type: 'tool_use', id: 't1', name: 'list_listings', input: {} }];
+    if (tour === 2) {
+      const resultat = JSON.parse(corps.messages.at(-1).content[0].content);
+      assert.equal(resultat.annonces[0].id, 'bienici:x1');
+      return [{ type: 'tool_use', id: 't2', name: 'propose_listing_actions', input: { actions: [{ ref: 'bienici:x1', action: 'fav' }] } }];
+    }
+    return [{ type: 'text', text: 'Je te propose de garder le studio.' }];
+  });
+  const r = await env.post({ message: 'Garde ma meilleure annonce', history: [], criteria: CRITERES_VALIDES });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.reply, 'Je te propose de garder le studio.');
+  assert.equal(r.body.propositions[0].type, 'actions');
+  assert.equal(r.body.propositions[0].actions[0].id, 'bienici:x1');
+  const j = env.fichiers.get('docs/data/journal.json').content.entries.at(-1);
+  assert.equal(j.kind, 'chat');
+  assert.deepEqual(j.propositions, ['actions']);
+  assert.deepEqual(j.outils, ['list_listings', 'propose_listing_actions']);
+  assert.ok(!env.fichiers.has('docs/data/etat.json'), "le chat n'écrit jamais l'état partagé : seule la validation dans l'appli le fait");
+});
+
+test("chat : panne de l'API du modèle → erreur 502 lisible, rien n'est écrit", async () => {
+  const env = creerEnvDeTest();
+  env.fichiers.set('docs/criteria.json', { sha: 'sha0', content: CRITERES_VALIDES });
+  env.definirModele(() => { throw new Error('boum'); });
+  const r = await env.post({ message: 'Salut', history: [], criteria: CRITERES_VALIDES });
+  assert.equal(r.status, 502);
+  assert.match(r.body.error, /Réessaie/);
 });

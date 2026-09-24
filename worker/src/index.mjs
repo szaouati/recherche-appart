@@ -8,73 +8,12 @@
 // pouvaient diverger. Maintenant, le site lit et écrit toujours via ce Worker, qui lit/écrit les
 // fichiers du dépôt avec son propre jeton GitHub (jamais exposé au navigateur) et sert d'arbitre
 // unique en cas d'écritures concurrentes (retry-once-on-409, comme le journal).
-import { CRITERES, mergeCriteria } from '../../docs/score.mjs';
+import { mergeCriteria } from '../../docs/score.mjs';
+import { executerAgent, creerAppelAnthropic, validerCriteres as validerProposition, STATUTS_CONTACT } from './agent.mjs';
 import { cleAnnonce } from '../../collector/lib/cle-annonce.mjs';
 
-const MODEL = 'claude-haiku-4-5-20251001';
-const MAX_TOKENS = 700;
 const MAX_HISTORY = 12; // derniers messages envoyés en contexte (6 échanges)
 const MAX_MSG_LEN = 1500;
-
-function poidsSchema() {
-  const properties = {};
-  for (const [k] of CRITERES) properties[k] = { type: 'integer', minimum: 0, maximum: 5 };
-  return { type: 'object', properties, additionalProperties: false };
-}
-
-const CRITERIA_TOOL = {
-  name: 'propose_criteria',
-  description:
-    "Propose un nouveau réglage complet des critères de recherche, que Tabatha valide ou non avant application. " +
-    "Renvoie toujours l'objet COMPLET (repars des critères actuels fournis, ne change que ce qui a été demandé).",
-  input_schema: {
-    type: 'object',
-    properties: {
-      budgetMax: { type: 'number', minimum: 300, maximum: 5000, description: 'Loyer maximum charges comprises, en euros' },
-      surfaceMin: { type: 'number', minimum: 5, maximum: 200, description: 'Surface minimale en m²' },
-      piecesMin: { type: 'integer', minimum: 1, maximum: 6 },
-      arrondissements: { type: 'array', items: { type: 'integer', minimum: 1, maximum: 20 }, description: 'Arrondissements autorisés ; vide = tout Paris' },
-      arrondissementsPref: { type: 'array', items: { type: 'integer', minimum: 1, maximum: 20 } },
-      meuble: { type: 'string', enum: ['indifferent', 'oui', 'non'] },
-      exclure: {
-        type: 'object',
-        properties: { rdc: { type: 'boolean' }, dpeFG: { type: 'boolean' }, coloc: { type: 'boolean' } },
-        additionalProperties: false,
-      },
-      poids: poidsSchema(),
-      alerteActive: { type: 'boolean' },
-      alerteScoreMin: { type: 'integer', minimum: 0, maximum: 100 },
-    },
-    required: ['budgetMax', 'surfaceMin', 'piecesMin', 'arrondissements', 'meuble', 'exclure', 'poids', 'alerteActive', 'alerteScoreMin'],
-  },
-};
-
-const clamp = (n, lo, hi, dflt) => (Number.isFinite((n = Number(n))) ? Math.min(hi, Math.max(lo, n)) : dflt);
-const listeArr = (a) => (Array.isArray(a) ? [...new Set(a.map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 20))] : []);
-
-// Ne jamais faire confiance telle quelle à la sortie du modèle ou à ce qu'envoie le navigateur, même
-// hors contexte adverse : on reclampe tout aux mêmes bornes que le schéma, en repartant des critères
-// actuels en cas de doute.
-function validerProposition(p, actuel) {
-  if (!p || typeof p !== 'object') return null;
-  const c = mergeCriteria(actuel);
-  return mergeCriteria({
-    budgetMax: clamp(p.budgetMax, 300, 5000, c.budgetMax),
-    surfaceMin: clamp(p.surfaceMin, 5, 200, c.surfaceMin),
-    piecesMin: clamp(p.piecesMin, 1, 6, c.piecesMin),
-    arrondissements: listeArr(p.arrondissements),
-    arrondissementsPref: listeArr(p.arrondissementsPref),
-    meuble: ['indifferent', 'oui', 'non'].includes(p.meuble) ? p.meuble : c.meuble,
-    exclure: {
-      rdc: typeof p.exclure?.rdc === 'boolean' ? p.exclure.rdc : c.exclure.rdc,
-      dpeFG: typeof p.exclure?.dpeFG === 'boolean' ? p.exclure.dpeFG : c.exclure.dpeFG,
-      coloc: typeof p.exclure?.coloc === 'boolean' ? p.exclure.coloc : c.exclure.coloc,
-    },
-    poids: Object.fromEntries(CRITERES.map(([k]) => [k, clamp(p.poids?.[k], 0, 5, c.poids[k])])),
-    alerteActive: typeof p.alerteActive === 'boolean' ? p.alerteActive : c.alerteActive,
-    alerteScoreMin: clamp(p.alerteScoreMin, 0, 100, c.alerteScoreMin),
-  });
-}
 
 function corsHeaders(origin, allowed) {
   const ok = allowed.includes(origin);
@@ -140,7 +79,7 @@ async function appendJournal(env, entry) {
   }
 }
 
-const TYPES_EVENEMENT = ['fav', 'ecarte', 'note', 'critere_change', 'ajout_manuel', 'avis'];
+const TYPES_EVENEMENT = ['fav', 'ecarte', 'note', 'critere_change', 'ajout_manuel', 'avis', 'contact'];
 
 // --- État partagé (favoris/écartés/notes/annonces manuelles) -----------------------------------
 // Un Worker Cloudflare réutilise le même module (donc les mêmes objets au niveau module) entre
@@ -149,7 +88,7 @@ const TYPES_EVENEMENT = ['fav', 'ecarte', 'note', 'critere_change', 'ajout_manue
 // « docs/data/etat.json » introuvable (ou illisible) se retrouveraient à muter le MÊME objet en
 // mémoire, et donc à mélanger leurs données. `etatPropre` fait pareil par précaution : elle ne
 // renvoie jamais telles quelles les sous-structures de `data`, toujours des copies fraîches.
-const etatVide = () => ({ statut: {}, notes: {}, manuel: [], rejetes: [], vuJusqua: null });
+const etatVide = () => ({ statut: {}, notes: {}, manuel: [], rejetes: [], contacts: {}, vuJusqua: null });
 
 function etatPropre(data) {
   return {
@@ -158,6 +97,8 @@ function etatPropre(data) {
     manuel: Array.isArray(data?.manuel) ? [...data.manuel] : [],
     // Clés (cleAnnonce) des annonces retirées par Sacha : la collecte par e-mail ne doit pas les ramener.
     rejetes: Array.isArray(data?.rejetes) ? [...data.rejetes] : [],
+    // Suivi des prises de contact : id d'annonce → { statut, maj, relance, visite, note, canal }. Aucune donnée personnelle.
+    contacts: data?.contacts && typeof data.contacts === 'object' ? { ...data.contacts } : {},
     vuJusqua: typeof data?.vuJusqua === 'string' ? data.vuJusqua : null,
   };
 }
@@ -232,6 +173,25 @@ function construireAnnonceManuelle(l) {
     publishedAt: now,
     photo: null,
   };
+}
+
+// Annonces collectées (docs/data/listings.json) lues telles quelles dans le dépôt (frais, sans cache CDN).
+async function lireListings(env) {
+  const r = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/contents/${env.LISTINGS_PATH || 'docs/data/listings.json'}`, {
+    headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github.raw+json', 'User-Agent': 'recherche-appart-bot' },
+  });
+  if (!r.ok) throw new Error(`GitHub GET listings ${r.status}`);
+  const d = await r.json();
+  return { listings: Array.isArray(d.listings) ? d.listings : [], meta: d.meta ?? {} };
+}
+
+async function chargerDonneesAgent(env) {
+  const [{ listings, meta }, etat, { data: critData }] = await Promise.all([
+    lireListings(env),
+    lireEtat(env),
+    lireJSON(env, env.CRITERIA_PATH || 'docs/criteria.json', {}),
+  ]);
+  return { listings, meta, etat, criteria: critData };
 }
 
 export default {
@@ -315,6 +275,28 @@ export default {
           etat = await ecrireEtatMute(env, (e) => { e.manuel.unshift(listing); e.manuel = e.manuel.slice(0, 200); });
           journalType = 'ajout_manuel';
           journalPayload = { url: listing.url, title: listing.title, price: listing.price };
+        } else if (body.action === 'set_contact') {
+          // Suivi de contact d'une annonce (contacté, réponse, visite…). statut null = retirer le suivi.
+          if (!id) return json({ error: 'id manquant' }, 400, headers);
+          const statut = STATUTS_CONTACT.includes(body.statut) ? body.statut : null;
+          const note = String(body.note ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
+          const jours = Number.isFinite(Number(body.relance_jours)) ? Math.min(30, Math.max(1, Math.round(Number(body.relance_jours)))) : null;
+          const visite = Number.isFinite(Date.parse(body.visite)) ? new Date(body.visite).toISOString() : null;
+          const canal = ['messagerie_annonce', 'email', 'sms', 'telephone'].includes(body.canal) ? body.canal : null;
+          etat = await ecrireEtatMute(env, (e) => {
+            if (!statut) { delete e.contacts[id]; return; }
+            const avant = e.contacts[id] ?? {};
+            e.contacts[id] = {
+              ...avant,
+              statut,
+              maj: new Date().toISOString(),
+              relance: jours ? new Date(Date.now() + jours * 864e5).toISOString() : (['refuse', 'sans_suite', 'visite'].includes(statut) ? null : avant.relance ?? null),
+              ...(visite ? { visite } : {}),
+              ...(note ? { note } : {}),
+              ...(canal ? { canal } : {}),
+            };
+          });
+          if (statut) { journalType = 'contact'; journalPayload = { listingId: id, statut, url: body.url, title: body.title }; }
         } else if (body.action === 'supprimer_manuel') {
           // Retire une annonce ajoutée à la main devenue indisponible (louée, retirée), et les
           // favoris/notes qui lui étaient attachés. Réversible via l'historique git.
@@ -388,35 +370,21 @@ export default {
       .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_MSG_LEN) }));
     const actuel = mergeCriteria(body.criteria && typeof body.criteria === 'object' ? body.criteria : {});
 
-    const system = [
-      'Tu es l\'assistant du site "Mon appart à Paris", qui aide Tabatha à régler ses critères de recherche de location.',
-      'Réponds toujours en français, en une ou deux phrases courtes, ton chaleureux et concret.',
-      "Restreins-toi strictement aux critères de recherche d'appartement : pour toute autre demande, dis poliment que tu n'es là que pour ça.",
-      `Critères actuels (JSON) : ${JSON.stringify(actuel)}`,
-      "Si elle demande clairement un changement (budget, surface, pièces, arrondissement, meublé, ce qui compte pour elle, seuil d'alerte…), appelle propose_criteria avec l'objet COMPLET mis à jour (repars des critères actuels, ne change que ce qui a été demandé). Sinon, réponds simplement, sans appeler l'outil.",
-    ].join('\n');
-
-    let data;
+    let resultat;
     try {
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: MODEL, max_tokens: MAX_TOKENS, system, messages: [...history, { role: 'user', content: message }], tools: [CRITERIA_TOOL] }),
-        signal: AbortSignal.timeout(25_000),
+      resultat = await executerAgent({
+        message, history, criteresClient: actuel,
+        deps: { chargerDonnees: () => chargerDonneesAgent(env), appelerModele: creerAppelAnthropic(env) },
       });
-      if (!r.ok) throw new Error(`Anthropic HTTP ${r.status} : ${(await r.text()).slice(0, 300)}`);
-      data = await r.json();
     } catch (e) {
       console.error(e);
       return json({ error: "Je n'ai pas pu réfléchir à ta demande là. Réessaie dans une minute, ou règle directement les curseurs." }, 502, headers);
     }
 
-    const texte = (data.content ?? []).filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
-    const outil = (data.content ?? []).find((b) => b.type === 'tool_use' && b.name === 'propose_criteria');
-    const proposal = outil ? validerProposition(outil.input, actuel) : null;
-    const reply = texte || (proposal ? 'Voilà ce que je te propose :' : '…');
-
-    ctx.waitUntil(appendJournal(env, { kind: 'chat', message, reply, proposal, criteria: actuel }));
-    return json({ reply, proposal }, 200, headers);
+    ctx.waitUntil(appendJournal(env, {
+      kind: 'chat', message, reply: resultat.reply, proposal: resultat.proposal,
+      propositions: resultat.propositions.map((p) => p.type), outils: resultat.outils, criteria: actuel,
+    }));
+    return json({ reply: resultat.reply, proposal: resultat.proposal, propositions: resultat.propositions }, 200, headers);
   },
 };

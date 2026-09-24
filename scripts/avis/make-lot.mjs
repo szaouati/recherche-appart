@@ -1,18 +1,14 @@
 // Prépare le lot d'annonces que Sacha doit relire avant Tabatha → docs/data/avis-lot.json (page docs/avis.html).
 // Usage : node scripts/avis/make-lot.mjs [--exclude=id1,id2,…]   (ids déjà relus par Sacha, à ne pas remontrer)
 import fs from 'node:fs';
-import { rankListings } from '../../docs/score.mjs';
+import { rankListings, estVisible } from '../../docs/score.mjs';
 
 const exclus = new Set((process.argv.find((a) => a.startsWith('--exclude=')) || '').replace('--exclude=', '').split(',').filter(Boolean));
 const d = JSON.parse(fs.readFileSync('docs/data/listings.json', 'utf8'));
 const e = JSON.parse(fs.readFileSync('docs/data/etat.json', 'utf8'));
 const crit = JSON.parse(fs.readFileSync('docs/criteria.json', 'utf8'));
-const lastFull = d.meta.lastFullAt;
 // Même définition d'« annonce visible » que le site (docs/app.js, actives()).
-const SOURCES_EMAIL = ['SeLoger', 'Leboncoin', 'PAP'];
-const actives = (l) => l.source === 'Manuel' || (!l.dupOf && !l.retire && (SOURCES_EMAIL.includes(l.source)
-  ? Date.now() - new Date(l.last_seen).getTime() < 10 * 864e5
-  : !lastFull || new Date(l.last_seen) > new Date(new Date(lastFull).getTime() - 48 * 36e5)));
+const actives = (l) => estVisible(l, d.meta);
 const { listings } = rankListings([...e.manuel, ...d.listings], crit);
 const lot = listings.filter((l) => l.ok && actives(l) && !exclus.has(l.id) && e.statut[l.id] !== 'ecarte');
 

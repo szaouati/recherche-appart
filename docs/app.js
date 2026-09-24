@@ -1,4 +1,4 @@
-import { CRITERES, mergeCriteria, rankListings, verdictScore } from './score.mjs';
+import { CRITERES, mergeCriteria, rankListings, verdictScore, estVisible } from './score.mjs';
 
 const $ = (s, r = document) => r.querySelector(s);
 const store = {
@@ -213,13 +213,7 @@ function calculer() {
   ranked = rankListings(toutes(), criteria).listings;
 }
 
-// Les annonces issues d'un e-mail (SeLoger, Leboncoin, PAP) ne sont lues qu'une fois : leur last_seen ne
-// se rafraîchit jamais, donc la règle des 48 h des annonces Bien'ici les ferait disparaître à tort. On les
-// garde 10 jours, sauf si elles sont marquées retirées (repérées absentes des exports du matin).
-const SOURCES_EMAIL = ['SeLoger', 'Leboncoin', 'PAP'];
-const actives = (l) => l.source === 'Manuel' || (!l.dupOf && !l.retire && (SOURCES_EMAIL.includes(l.source)
-  ? Date.now() - new Date(l.last_seen).getTime() < 10 * 864e5
-  : !meta.lastFullAt || new Date(l.last_seen) > new Date(new Date(meta.lastFullAt).getTime() - 48 * 36e5)));
+const actives = (l) => estVisible(l, meta);
 
 function filtrer() {
   const ok = ranked.filter((l) => l.ok && actives(l));

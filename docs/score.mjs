@@ -184,3 +184,17 @@ export function verdictScore(rang, total) {
   if (p <= 0.75) return { tier: 'moyen', icone: '–', label: 'Passable pour elle' };
   return { tier: 'bas', icone: '·', label: 'Assez loin de ses critères' };
 }
+
+// --- Visibilité ------------------------------------------------------------
+// Règle unique « cette annonce est-elle montrée à Tabatha ? », partagée par le site, le Worker (bot) et les
+// scripts. Les annonces ajoutées à la main restent toujours ; celles issues d'un e-mail (lues une seule fois,
+// donc jamais « revues ») sont gardées 10 jours ; les autres doivent avoir été revues lors de la dernière
+// collecte complète (à 48 h près) pour ne pas afficher d'annonces disparues.
+export const SOURCES_EMAIL = ['SeLoger', 'Leboncoin', 'PAP'];
+export function estVisible(l, meta = {}, maintenant = Date.now()) {
+  if (l.source === 'Manuel') return true;
+  if (l.dupOf || l.retire) return false;
+  const vu = new Date(l.last_seen).getTime();
+  if (SOURCES_EMAIL.includes(l.source)) return maintenant - vu < 10 * 864e5;
+  return !meta.lastFullAt || vu > new Date(meta.lastFullAt).getTime() - 48 * 36e5;
+}
