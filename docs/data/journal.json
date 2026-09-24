@@ -2160,6 +2160,52 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:42:57.628Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Où en est le marché de l'immobilier locatif en ce moment précis pour mon cas ?",
+      "reply": "Voici la photo du marché sur le 18e, parmi les annonces à moins de **900 €** que je suis 👇\n\n- **36 annonces** suivies actuellement dans le 18e pour ta surface min (10 m²)\n- Loyer médian : **800 €**, avec la moitié des annonces entre 684 € et 850 €\n- Prix au m² médian : environ **41,8 €/m²**\n- Pour les studios/1 pièce (30 annonces) : médiane à 798 €, assez proche de ton budget\n- **17 annonces sur 36** sont déjà proches du plafond de ton budget (90%+), donc l'offre à ce prix est plutôt tendue\n\nCôté dynamique récente : seulement **3 nouvelles annonces** ces 7 derniers jours (contre 6 la semaine précédente) et aucune baisse de prix détectée. Peu de recul sur si peu de jours, donc je ne parlerais pas encore de vraie tendance.\n\nComparé aux autres arrondissements que je suis, le 18e est dans la moyenne haute en loyer médian (800 €) mais avec un prix/m² plus doux que le 17e (54 €/m²) ou le 16e (46 €/m²).\n\n⚠️ Petite précision importante : ces chiffres ne portent que sur les annonces **sous ton budget** — donc ça décrit ce qui est accessible pour toi, pas le marché global du 18e. Et ce sont des loyers demandés, pas forcément les loyers réellement signés.\n\nTu veux que je te sorte les meilleures annonces actuelles dans le 18e ?",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "market_snapshot"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
