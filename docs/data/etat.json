@@ -423,25 +423,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790178221419",
-      "source": "Manuel",
-      "url": "https://www.leboncoin.fr/ad/locations/3245416013",
-      "title": "Leboncoin (recherche) — 760€, 65m², 1p — Simplon-Poissonniers (⚠️ surface à vérifier, semble suspecte pour ce prix)",
-      "price": 760,
-      "surface": 65,
-      "rooms": 1,
-      "arrondissement": 18,
-      "floor": 12,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-23T15:43:41.419Z",
-      "last_seen": "2026-09-23T15:43:41.419Z",
-      "publishedAt": "2026-09-23T15:43:41.419Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790178011317",
       "source": "Manuel",
       "url": "https://www.pap.fr/annonces/appartement-paris-18e-75018-r465301195",
@@ -481,5 +462,5 @@
     }
   ],
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T09:26:25.319Z"
+  "updatedAt": "2026-09-24T09:26:26.891Z"
 }
