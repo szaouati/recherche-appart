@@ -2529,6 +2529,52 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-09-24T13:45:38.127Z",
+      "kind": "chat",
+      "message": "[TEST Claude Code] Aide-moi à préparer une visite",
+      "reply": "Ton suivi de contact est vide pour l'instant : aucune visite programmée n'apparaît de mon côté 📋\n\nDu coup, dis-moi :\n- as-tu déjà une annonce précise pour laquelle tu veux préparer la visite (et une date/heure) ?\n- ou tu veux qu'on repère d'abord une annonce à contacter avant de penser à la visite ?\n\nSi tu as déjà un rendez-vous fixé (annonce + date), je peux te l'ajouter à ton calendrier et te préparer une petite check-list de questions à poser sur place. Sinon, on peut commencer par regarder tes meilleures annonces actuelles 😊",
+      "proposal": null,
+      "propositions": [],
+      "outils": [
+        "get_contact_board"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
