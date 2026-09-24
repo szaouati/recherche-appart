@@ -56,6 +56,7 @@ natifs, vanilla). Maquettes et générateur : `design/` (`node design/build-maqu
 | `docs/js/vues.mjs` | Écrans : annonces, favoris, suivi, plus, écartées, critères, détail (chacun renvoie du HTML) |
 | `docs/js/cartes.mjs` | Composants d'annonce : `carte()`, `visuel()` (photo **ou tuile** de remplacement), `badges()`, squelettes |
 | `docs/js/annonce-ui.mjs` | Fonctions **pures** d'affichage (quartier, type, étage, badges…) — testées (`test/annonce-ui.test.mjs`) |
+| `docs/js/filtres.mjs` | Filtres/tri d'**affichage** (pastilles, feuille « Filtres », tris) — fonctions pures testées (`test/filtres.test.mjs`). Locaux à l'appareil, **non sauvegardés** (un filtre oublié ne doit jamais cacher des annonces au lancement suivant) ; ≠ critères de recherche (partagés, `score.mjs`). Donnée absente ⇒ ne satisfait jamais un filtre |
 | `docs/js/chat.mjs` | Chat « Demander à Claude » + cartes de propositions (le bot ne modifie jamais rien seul) |
 | `docs/js/criteres.mjs`, `dialogs.mjs`, `mascotte.mjs`, `toast.mjs`, `util.mjs` | Formulaire critères ; ajout manuel + « Mon dossier » ; bulles ; toasts ; utilitaires |
 | `docs/app.css` | Design system : jetons (§1, clair/sombre), composants, `prefers-reduced-motion`. `docs/style.css` = ancienne feuille, **utilisée seulement par `avis.html`** |

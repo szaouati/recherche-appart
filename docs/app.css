@@ -77,6 +77,18 @@ em { font-style: normal; }
 .segs button { flex: 1; min-height: 40px; border: 0; border-radius: var(--r-pill); background: none; font-weight: 500; color: var(--muted); }
 .segs button[aria-selected='true'] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgba(60, 20, 30, .14); }
 .segs em { margin-left: 6px; color: var(--accent); font-weight: 600; }
+.pills-barre { position: sticky; top: env(safe-area-inset-top); z-index: 10; margin: 0 -16px; padding: 4px 16px 8px; background: var(--bg); }
+.pills { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px; scrollbar-width: none; }
+.pills::-webkit-scrollbar { display: none; }
+.pill { flex: none; min-height: var(--cible); display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 500; white-space: nowrap; transition: background var(--dur), color var(--dur); }
+.pill em { color: var(--muted); font-size: 12px; }
+.pill[aria-pressed='true'] { background: var(--ink); color: var(--bg); border-color: var(--ink); } .pill[aria-pressed='true'] em { color: inherit; opacity: .75; }
+.pill:disabled { opacity: .45; cursor: default; }
+.pill-filtres { font-weight: 600; }
+.pill-filtres .pastille-n { background: var(--accent); color: var(--accent-ink); border-radius: 9px; min-width: 18px; padding: 0 5px; line-height: 18px; text-align: center; font-weight: 600; }
+.tri { display: inline-flex; align-items: center; gap: 4px; }
+.tri select { min-height: var(--cible); border: 0; background: none; font: 600 14px var(--sans); color: var(--ink); padding: 0 2px; max-width: 170px; }
+.texte-btn.en-ligne { display: inline; min-height: 0; padding: 0; margin-left: 4px; color: var(--accent); text-decoration: underline; }
 .barre-liste { display: flex; justify-content: space-between; align-items: center; min-height: var(--cible); color: var(--muted); font-size: 14px; }
 .plus-btn { display: flex; margin: 20px auto; }
 
@@ -136,9 +148,9 @@ em { font-style: normal; }
 .ligne-txt { flex: 1; min-width: 0; display: grid; } .ligne-txt small { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ligne-fl { color: var(--muted); font-size: 22px; }
 .sources { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; color: var(--muted); }
-.pill { border: 1px solid var(--line); border-radius: var(--r-pill); padding: 4px 12px; background: var(--surface); }
-.pill.ok::before { content: '● '; color: var(--good); } .pill.erreur::before { content: '● '; color: var(--danger); } .pill.partiel::before { content: '● '; color: var(--mid); }
-.pill.todo { border-style: dashed; }
+.src-pill { border: 1px solid var(--line); border-radius: var(--r-pill); padding: 4px 12px; background: var(--surface); }
+.src-pill.ok::before { content: '● '; color: var(--good); } .src-pill.erreur::before { content: '● '; color: var(--danger); } .src-pill.partiel::before { content: '● '; color: var(--mid); }
+.src-pill.todo { border-style: dashed; }
 
 /* §5 — Détail : écran plein sur mobile, tiroir à droite sur grand écran ---------------------------------------- */
 .detail { position: fixed; inset: 0; z-index: 40; background: var(--bg); display: flex; flex-direction: column; animation: monte .2s ease-out; }
@@ -187,6 +199,9 @@ textarea { resize: vertical; min-height: 72px; }
   .vue { max-width: none; margin: 0; padding: 0 0 80px; }
   .liste { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 24px; }
   .lignes, .criteres { max-width: 640px; }
+  .segs { max-width: 380px; }
+  .pills-barre { margin-inline: 0; padding-inline: 0; }
+  .pills { flex-wrap: wrap; overflow: visible; margin: 0; padding: 2px 0; }
   .carte:hover { transform: translateY(-2px); }
 }
 
@@ -226,6 +241,14 @@ dialog[open] { animation: monte .2s ease-out; }
 @media (max-width: 600px) {
   dialog:not(#dlg-bot) { width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 22px 22px 0 0; max-height: 92dvh; border-bottom: 0; box-shadow: var(--shadow-sheet); padding-bottom: env(safe-area-inset-bottom); }
 }
+
+/* Feuille « Filtres » */
+.filtres-dlg { padding-bottom: 0; }
+.case-filtre { display: flex !important; align-items: center; gap: 10px; min-height: var(--cible); }
+.case-filtre em { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+.cases-filtre { margin: 0; }
+.sticky-actions { position: sticky; bottom: 0; background: var(--surface); padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); margin: 8px -20px 0; padding-inline: 20px; }
+.sticky-actions .btn { flex: 1; }
 
 /* §8 — Chat, propositions, mascotte (repris de l'ancienne feuille de style, jetons mis à jour) ------------------------- */
 dialog#dlg-bot { height: min(680px, 84vh); }

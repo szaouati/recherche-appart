@@ -4,9 +4,11 @@ import { esc, safeUrl, eur, depuis } from './util.mjs';
 import { S, visible, annonceParId } from './etat.mjs';
 import { carte, squeletteCartes, visuel, badges, verdictDe, boutonCoeur, ICONES } from './cartes.mjs';
 import { htmlCriteres } from './criteres.mjs';
+import { PASTILLES, TRIS, filtresVides, nbFiltres, appliquer, compter, trier, bornes } from './filtres.mjs';
 import { quartier, typeLogement, etageLibelle, prixM2, surfaceLibelle, sourceAffichee } from './annonce-ui.mjs';
 
-export const ui = { seg: 'nouveautes', limite: 30, segInitialise: false };
+export const ui = { seg: 'nouveautes', limite: 30, segInitialise: false, f: filtresVides() };
+const ctxFiltres = () => ({ contacts: S.contacts });
 
 // --- Sélections ------------------------------------------------------------
 const retenues = () => S.ranked.filter((l) => l.ok && visible(l) && S.statut[l.id] !== 'ecarte');
@@ -18,26 +20,74 @@ export const relancesDues = () => Object.values(S.contacts).filter((c) => relanc
 const vide = (titre, texte, action = '') => `<div class="vide"><b>${esc(titre)}</b><p>${esc(texte)}</p>${action}</div>`;
 
 // --- Annonces --------------------------------------------------------------
+const ICONE_FILTRES = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg>';
+
+/** Liste affichée (après filtres et tri) et compteurs des deux segments, filtres appliqués. */
+export function listesAnnonces() {
+  const ctx = ctxFiltres();
+  const n = nouvelles();
+  const m = retenues();
+  const brute = ui.seg === 'nouveautes' ? n : m;
+  return { n, m, brute, nF: appliquer(n, ui.f, ctx).length, mF: appliquer(m, ui.f, ctx).length, liste: trier(appliquer(brute, ui.f, ctx), ui.f) };
+}
+
+function pastillesHtml(brute) {
+  const ctx = ctxFiltres();
+  const nb = nbFiltres(ui.f);
+  return `<button class="pill pill-filtres" type="button" data-filtres data-fk="filtres">${ICONE_FILTRES} Filtres${nb ? `<em class="pastille-n">${nb}</em>` : ''}</button>`
+    + PASTILLES.filter((p) => !p.extra).map((p) => {
+      const actif = ui.f.actifs.has(p.k);
+      const n = compter(brute, ui.f, ctx, p.k);
+      return `<button class="pill" type="button" aria-pressed="${actif}" data-pill="${p.k}" data-fk="pill:${p.k}"${!actif && !n ? ' disabled' : ''}>${esc(p.t)}<em>${n}</em></button>`;
+    }).join('');
+}
+
 export function vueAnnonces() {
   if (!S.charge) return `<ul class="liste">${squeletteCartes(4)}</ul>`;
   if (S.erreurChargement) return vide('Impossible de charger les annonces', 'Le fichier data/listings.json ne répond pas. Réessaie dans un moment, ou préviens Sacha.', '<button class="btn" data-recharger>Réessayer</button>');
   if (!ui.segInitialise) { ui.segInitialise = true; if (!nouvelles().length) ui.seg = 'meilleures'; }
-  const n = nouvelles();
-  const m = retenues();
-  const liste = ui.seg === 'nouveautes' ? n : m;
-  const msgVide = ui.seg === 'nouveautes'
-    ? ['Rien de nouveau depuis ta dernière visite', 'Regarde les « Meilleures » en attendant.', '<button class="btn" data-seg="meilleures">Voir les meilleures</button>']
-    : ['Aucune annonce ne passe tes critères', 'Essaie d\'élargir le budget ou les arrondissements.', '<a class="btn" href="#/plus/criteres">Modifier mes critères</a>'];
+  const { brute, nF, mF, liste } = listesAnnonces();
+  const filtre = nbFiltres(ui.f) > 0;
+  const msgVide = filtre
+    ? ['Aucune annonce avec ces filtres', `Il y en a ${brute.length} sans filtre.`, '<button class="btn" data-filtres-reset>Retirer les filtres</button>']
+    : ui.seg === 'nouveautes'
+      ? ['Rien de nouveau depuis ta dernière visite', 'Regarde les « Meilleures » en attendant.', '<button class="btn" data-seg="meilleures">Voir les meilleures</button>']
+      : ['Aucune annonce ne passe tes critères', 'Essaie d\'élargir le budget ou les arrondissements.', '<a class="btn" href="#/plus/criteres">Modifier mes critères</a>'];
   const maj = S.meta.generatedAt ? `${(S.meta.count ?? 0).toLocaleString('fr-FR')} annonces suivies · mise à jour ${depuis(S.meta.generatedAt)}` : '';
   return `<div class="segs" role="tablist" aria-label="Affichage">
-      <button role="tab" aria-selected="${ui.seg === 'nouveautes'}" data-seg="nouveautes">Nouveautés<em>${n.length}</em></button>
-      <button role="tab" aria-selected="${ui.seg === 'meilleures'}" data-seg="meilleures">Meilleures<em>${m.length}</em></button>
+      <button role="tab" aria-selected="${ui.seg === 'nouveautes'}" data-seg="nouveautes" data-fk="seg:n">Nouveautés<em>${nF}</em></button>
+      <button role="tab" aria-selected="${ui.seg === 'meilleures'}" data-seg="meilleures" data-fk="seg:m">Meilleures<em>${mF}</em></button>
     </div>
-    <div class="barre-liste"><span>${liste.length} annonce${liste.length > 1 ? 's' : ''}</span>
-      ${ui.seg === 'nouveautes' && liste.length ? '<button class="texte-btn" data-vu>Tout marquer comme vu</button>' : ''}</div>
+    <div class="pills-barre"><div class="pills" role="group" aria-label="Filtres rapides">${pastillesHtml(brute)}</div></div>
+    <div class="barre-liste"><span aria-live="polite">${liste.length}${filtre ? ` sur ${brute.length}` : ''} annonce${liste.length > 1 ? 's' : ''}${filtre ? ' · <button class="texte-btn en-ligne" data-filtres-reset>Réinitialiser</button>' : ''}</span>
+      <label class="tri">Trier <select data-tri data-fk="tri" aria-label="Trier les annonces">${TRIS.map(([k, t]) => `<option value="${k}"${ui.f.tri === k ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label></div>
     ${liste.length ? `<ul class="liste">${liste.slice(0, ui.limite).map(carte).join('')}</ul>` : vide(...msgVide)}
     ${liste.length > ui.limite ? '<button class="btn plus-btn" data-plus>Afficher plus</button>' : ''}
+    ${ui.seg === 'nouveautes' && liste.length ? '<button class="btn ghost plus-btn" data-vu>✓ Tout marquer comme vu</button>' : ''}
     ${maj ? `<p class="maj">${esc(maj)}</p>` : ''}`;
+}
+
+/** Contenu de la feuille « Filtres » (curseurs, équipements, tri). Les entrées sont mises à jour sur place, sans redessiner la feuille. */
+export function htmlFiltres() {
+  const { brute, liste } = listesAnnonces();
+  const b = bornes(brute, S.criteria.budgetMax);
+  const F = ui.f;
+  const prix = F.prixMax ?? b.prixMax;
+  const surf = F.surfaceMin ?? 0;
+  const ctx = ctxFiltres();
+  const case_ = (p) => `<label class="case-filtre"><input type="checkbox" data-f-pastille="${p.k}"${F.actifs.has(p.k) ? ' checked' : ''}> ${esc(p.t)} <em>${compter(brute, F, ctx, p.k)}</em></label>`;
+  return `<div class="dlg-head"><h2>Filtres</h2><button class="btn ghost small" type="button" data-filtres-fermer>Fermer</button></div>
+    <p class="hint">Ces filtres resserrent la liste sur cet appareil, le temps de la session. Tes critères de recherche (partagés) ne changent pas. Une annonce sans l'information demandée est masquée.</p>
+    <label class="champ">Loyer maximum <output id="o-f-prix">${F.prixMax == null ? 'Aucun' : eur(prix)}</output>
+      <input type="range" data-f="prixMax" min="${b.prixMin}" max="${b.prixMax}" step="25" value="${prix}"></label>
+    <label class="champ">Surface minimum <output id="o-f-surf">${F.surfaceMin == null ? 'Aucune' : `${surf} m²`}</output>
+      <input type="range" data-f="surfaceMin" min="0" max="${b.surfMax}" step="1" value="${surf}"></label>
+    <fieldset class="seg"><legend>Étage</legend>
+      ${[[null, 'Peu importe'], [2, '2e et +'], [4, '4e et +']].map(([v, t]) => `<label><input type="radio" name="etageMin" data-f="etageMin" value="${v ?? ''}"${F.etageMin === v ? ' checked' : ''}> ${t}</label>`).join('')}
+    </fieldset>
+    <fieldset class="cases-filtre"><legend>Équipements et suivi</legend>${PASTILLES.map(case_).join('')}</fieldset>
+    <label class="champ">Trier par <select data-tri-feuille>${TRIS.map(([k, t]) => `<option value="${k}"${F.tri === k ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+    <div class="dlg-actions sticky-actions"><button class="btn ghost" type="button" data-filtres-reset data-dans-feuille>Réinitialiser</button><button class="btn primary" type="button" data-filtres-fermer id="btn-voir">Voir ${liste.length} annonce${liste.length > 1 ? 's' : ''}</button></div>`;
 }
 
 // --- Favoris ---------------------------------------------------------------
@@ -67,8 +117,8 @@ export function vueSuivi() {
 
 // --- Plus ------------------------------------------------------------------
 function pillsSources() {
-  const pills = (S.meta.sources || []).map((s) => `<span class="pill ${esc(s.status)}" title="${esc(s.error ?? '')}">${esc(s.name)} · ${s.status === 'erreur' ? 'en panne' : `${s.count} annonces`}</span>`);
-  pills.push('<span class="pill todo" title="Les alertes e-mail SeLoger / Leboncoin / PAP arrivent dans une boîte dédiée, lues par le collecteur ; les exports du matin complètent">SeLoger, Leboncoin, PAP · via alertes e-mail et exports du matin</span>');
+  const pills = (S.meta.sources || []).map((s) => `<span class="src-pill ${esc(s.status)}" title="${esc(s.error ?? '')}">${esc(s.name)} · ${s.status === 'erreur' ? 'en panne' : `${s.count} annonces`}</span>`);
+  pills.push('<span class="src-pill todo" title="Les alertes e-mail SeLoger / Leboncoin / PAP arrivent dans une boîte dédiée, lues par le collecteur ; les exports du matin complètent">SeLoger, Leboncoin, PAP · via alertes e-mail et exports du matin</span>');
   return pills.join('');
 }
 const svg = (d) => `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -166,4 +216,19 @@ export function vueDetail(id) {
       </div>
     </div>
     <div class="det-cta"><a class="btn" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener noreferrer">Voir l'annonce ↗</a><button class="btn primary" type="button" data-contact-annonce="${esc(l.id)}">✉️ Contacter</button></div>`;
+}
+
+/** Met à jour, sans la redessiner, la feuille « Filtres » ouverte : compteur du bouton, compteurs des cases, valeurs des curseurs. */
+export function majFeuilleFiltres(racine) {
+  const { brute, liste } = listesAnnonces();
+  const ctx = ctxFiltres();
+  const F = ui.f;
+  const btn = racine.querySelector('#btn-voir');
+  if (btn) btn.textContent = `Voir ${liste.length} annonce${liste.length > 1 ? 's' : ''}`;
+  for (const cb of racine.querySelectorAll('[data-f-pastille]')) {
+    const em = cb.parentElement.querySelector('em');
+    if (em) em.textContent = compter(brute, F, ctx, cb.dataset.fPastille);
+  }
+  const o1 = racine.querySelector('#o-f-prix'); if (o1) o1.textContent = F.prixMax == null ? 'Aucun' : eur(F.prixMax);
+  const o2 = racine.querySelector('#o-f-surf'); if (o2) o2.textContent = F.surfaceMin == null ? 'Aucune' : `${F.surfaceMin} m²`;
 }

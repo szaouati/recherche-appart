@@ -2,13 +2,14 @@
 // les écrans dans js/vues.mjs, les cartes dans js/cartes.mjs, le chat dans js/chat.mjs.
 import { $, $$, eur, depuis } from './js/util.mjs';
 import { S, surChangement, emit, chargerTout, demarrerSynchro, appliquerEtat, annonceParId } from './js/etat.mjs';
-import { ui, vueAnnonces, vueFavoris, vueSuivi, vuePlus, vueEcartees, vueCriteres, vueDetail, favoris, relancesDues, resumeCriteres, nouvelles } from './js/vues.mjs';
+import { ui, htmlFiltres, majFeuilleFiltres, vueAnnonces, vueFavoris, vueSuivi, vuePlus, vueEcartees, vueCriteres, vueDetail, favoris, relancesDues, resumeCriteres, nouvelles } from './js/vues.mjs';
 import { remplirFormulaire, brancherCriteres, formulaireActif } from './js/criteres.mjs';
 import { brancherBot, ouvrirBot, envoyerBot } from './js/chat.mjs';
 import { brancherDialogs, ouvrirAjout, ouvrirDossier } from './js/dialogs.mjs';
 import { brancherMascotte, proposerBulleCriteres } from './js/mascotte.mjs';
 import { toast } from './js/toast.mjs';
 import { quartier } from './js/annonce-ui.mjs';
+import { filtresVides, bornes } from './js/filtres.mjs';
 
 // --- Routes ----------------------------------------------------------------
 // #/ (annonces) · #/favoris · #/suivi · #/plus · #/plus/criteres · #/plus/ecartees · #/annonce/<id> (par-dessus l'onglet en cours)
@@ -50,9 +51,13 @@ function rendreVue({ force = false } = {}) {
   const y = window.scrollY;
   const actif = document.activeElement?.closest?.('[data-act][data-id]');
   const cle = actif ? `[data-act="${actif.dataset.act}"][data-id="${CSS.escape(actif.dataset.id)}"]` : null;
+  const fk = document.activeElement?.closest?.('[data-fk]')?.dataset.fk;
+  const pillsX = $('.pills', racine)?.scrollLeft ?? 0;
   racine.innerHTML = vueCourante();
   if (!force) window.scrollTo(0, y);
+  const pills = $('.pills', racine); if (pills) pills.scrollLeft = pillsX;
   if (cle) $(cle, racine)?.focus({ preventScroll: true });
+  else if (fk) $(`[data-fk="${CSS.escape(fk)}"]`, racine)?.focus({ preventScroll: true });
 }
 
 function rendreDetail() {
@@ -148,8 +153,17 @@ document.addEventListener('click', (e) => {
     }
     return;
   }
+  const pill = t('[data-pill]');
+  if (pill) { const k = pill.dataset.pill; ui.f.actifs.has(k) ? ui.f.actifs.delete(k) : ui.f.actifs.add(k); ui.limite = 30; rendreVue({ force: true }); return; }
+  if (t('[data-filtres]')) { $('#filtres-corps').innerHTML = htmlFiltres(); $('#dlg-filtres').showModal(); return; }
+  if (t('[data-filtres-fermer]')) { $('#dlg-filtres').close(); return; }
+  if (t('[data-filtres-reset]')) {
+    ui.f = { ...filtresVides(), tri: ui.f.tri }; ui.limite = 30; rendreVue({ force: true });
+    if ($('#dlg-filtres').open) { $('#filtres-corps').innerHTML = htmlFiltres(); $('#btn-voir')?.focus(); }
+    return;
+  }
   const seg = t('[data-seg]');
-  if (seg) { ui.seg = seg.dataset.seg; ui.limite = 30; rendreVue(); return; }
+  if (seg) { ui.seg = seg.dataset.seg; ui.limite = 30; rendreVue({ force: true }); return; }
   if (t('[data-plus]')) { ui.limite += 30; rendreVue(); return; }
   if (t('[data-vu]')) { appliquerEtat('set_vu', { ts: new Date().toISOString() }); return; }
   const bot = t('[data-bot]');
@@ -160,7 +174,24 @@ document.addEventListener('click', (e) => {
   if (t('[data-recharger]')) location.reload();
 });
 
+// Feuille « Filtres » : les entrées modifient ui.f en direct ; la liste dessous suit, la feuille n'est pas redessinée.
+function surFiltre(e) {
+  const el = e.target;
+  if (el.matches('[data-tri], [data-tri-feuille]')) { ui.f.tri = el.value; rendreVue({ force: true }); if (el.matches('[data-tri-feuille]')) majFeuilleFiltres($('#filtres-corps')); return; }
+  const corps = $('#filtres-corps');
+  if (!corps.contains(el)) return;
+  if (el.matches('[data-f-pastille]')) { const k = el.dataset.fPastille; el.checked ? ui.f.actifs.add(k) : ui.f.actifs.delete(k); }
+  else if (el.dataset.f === 'prixMax') { const max = Number(el.max); ui.f.prixMax = Number(el.value) >= max ? null : Number(el.value); }
+  else if (el.dataset.f === 'surfaceMin') ui.f.surfaceMin = Number(el.value) <= 0 ? null : Number(el.value);
+  else if (el.dataset.f === 'etageMin') ui.f.etageMin = el.value === '' ? null : Number(el.value);
+  else return;
+  ui.limite = 30;
+  rendreVue({ force: true });
+  majFeuilleFiltres(corps);
+}
+document.addEventListener('input', (e) => { if (e.target.matches?.('[data-f="prixMax"], [data-f="surfaceMin"]')) surFiltre(e); });
 document.addEventListener('change', (e) => {
+  if (e.target.matches?.('[data-tri], [data-tri-feuille], [data-f-pastille], [data-f="etageMin"]')) { surFiltre(e); return; }
   const sel = e.target.closest('select.suivi');
   if (!sel) return;
   const id = sel.dataset.id;

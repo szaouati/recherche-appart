@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app.css?v=458aca44">
+  <link rel="stylesheet" href="app.css?v=575ea2c4">
 
   <!-- Installation sur l'écran d'accueil (PWA) -->
   <link rel="manifest" href="manifest.json">
@@ -78,6 +78,10 @@
     </form>
   </dialog>
 
+  <dialog id="dlg-filtres" aria-label="Filtres">
+    <div class="dlg wide filtres-dlg" id="filtres-corps"></div>
+  </dialog>
+
   <dialog id="dlg-dossier">
     <form method="dialog" id="form-dossier" class="dlg">
       <h2>👤 Mon dossier</h2>
@@ -111,7 +115,7 @@
   <!-- Versions : NE PAS éditer à la main. `node scripts/version-site.mjs` réécrit ce bloc, le ?v= de app.js et celui de
        app.css (empreinte du contenu de chaque fichier), sans quoi un appareil peut rester bloqué sur une vieille version
        (GitHub Pages met tout en cache 10 min, Safari bien plus longtemps). test/site-version.test.mjs échoue si on l'oublie. -->
-  <script type="importmap">{"imports":{"./agent-ui.mjs":"./agent-ui.mjs?v=9c151cf2","./js/annonce-ui.mjs":"./js/annonce-ui.mjs?v=8e9c2f50","./js/cartes.mjs":"./js/cartes.mjs?v=2257c790","./js/chat.mjs":"./js/chat.mjs?v=644ee76b","./js/criteres.mjs":"./js/criteres.mjs?v=fcbccd92","./js/dialogs.mjs":"./js/dialogs.mjs?v=a89a45b9","./js/etat.mjs":"./js/etat.mjs?v=52ba87da","./js/mascotte.mjs":"./js/mascotte.mjs?v=deb43cf9","./js/toast.mjs":"./js/toast.mjs?v=260c953b","./js/util.mjs":"./js/util.mjs?v=cf4383a2","./js/vues.mjs":"./js/vues.mjs?v=4cedcabd","./score.mjs":"./score.mjs?v=a4530b3c"}}</script>
-  <script type="module" src="app.js?v=30809ca9"></script>
+  <script type="importmap">{"imports":{"./agent-ui.mjs":"./agent-ui.mjs?v=9c151cf2","./js/annonce-ui.mjs":"./js/annonce-ui.mjs?v=8e9c2f50","./js/cartes.mjs":"./js/cartes.mjs?v=2257c790","./js/chat.mjs":"./js/chat.mjs?v=644ee76b","./js/criteres.mjs":"./js/criteres.mjs?v=fcbccd92","./js/dialogs.mjs":"./js/dialogs.mjs?v=a89a45b9","./js/etat.mjs":"./js/etat.mjs?v=52ba87da","./js/filtres.mjs":"./js/filtres.mjs?v=06d203d7","./js/mascotte.mjs":"./js/mascotte.mjs?v=deb43cf9","./js/toast.mjs":"./js/toast.mjs?v=260c953b","./js/util.mjs":"./js/util.mjs?v=cf4383a2","./js/vues.mjs":"./js/vues.mjs?v=f94c6dab","./score.mjs":"./score.mjs?v=a4530b3c"}}</script>
+  <script type="module" src="app.js?v=0672bf8c"></script>
 </body>
 </html>

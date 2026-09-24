@@ -27,6 +27,9 @@ function jeuStress() {
     floor: 1 + (i % 6), arrondissement: 18, district: i % 5 === 0 ? 'Quartier au nom exceptionnellement long pour tester la troncature sur une seule ligne dans la carte' : ['Goutte d\'Or', 'La Chapelle', 'Clignancourt', 'Grandes-Carrières'][i % 4],
     title: i === 3 ? 'Magnifique appartement lumineux '.repeat(12) : `Appartement ${i}`,
     photo: i % 3 === 0 ? null : i === 4 ? 'https://example.test/photo-cassee.jpg' : modele.photo,
+    furnished: i % 4 === 0 ? true : i % 4 === 1 ? false : null, elevator: i % 3 === 0 ? true : i % 3 === 1 ? false : null, dpe: ['A', 'C', 'D', 'E', 'G', null][i % 6],
+    features: { ...(i % 5 === 0 ? { balcon: true } : {}), ...(i % 7 === 0 ? { calme: true, lumineux: true } : {}) },
+    price_history: i % 11 === 0 ? [[maintenant, 600 + (i * 7) % 400 + 40], [maintenant, 500 + (i * 7) % 400]] : undefined,
     first_seen: maintenant, last_seen: maintenant, publishedAt: maintenant, dupOf: undefined, retire: undefined,
   }));
   return { meta: { ...src.meta, generatedAt: maintenant, lastFullAt: maintenant, count: listings.length }, listings };
