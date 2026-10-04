@@ -2244,6 +2244,18 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-10-04T17:01:42.346Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "seloger:262K14BI359H",
+        "leboncoin:3278467890",
+        "pap:441700160",
+        "seloger:26S1XVMWXBWC",
+        "seloger:24XQLIYGE437"
+      ],
+      "moment": "soir"
     }
   ]
 }
