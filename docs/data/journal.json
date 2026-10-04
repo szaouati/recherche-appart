@@ -2110,6 +2110,50 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-10-04T11:41:28.508Z",
+      "kind": "chat",
+      "message": "maouu",
+      "reply": "Haha, je vois que tu testes le clavier ! 🐱 Je suis l'assistant pour ta recherche d'appartement à Paris. Dis-moi ce que tu veux faire : voir les nouvelles annonces, faire un point sur ta recherche, ajuster tes critères, ou autre chose ?",
+      "proposal": null,
+      "propositions": [],
+      "outils": [],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
