@@ -2280,6 +2280,55 @@
         "pap:465501946"
       ],
       "moment": "soir"
+    },
+    {
+      "ts": "2026-10-05T17:57:21.389Z",
+      "kind": "chat",
+      "message": "Rédige-moi un message de contact pour cette annonce : 750 € · 18 m² · Location appartement 1 p. 18 m² — Paris 18e (réf pap:465501946).",
+      "reply": "Voilà, je te propose ce message pour l'annonce à 750 € dans le 18e : tu te présentes, tu demandes étage/ascenseur/DPE (infos manquantes) et tu proposes une visite. Tu n'as plus qu'à compléter les marqueurs ({{prenom}}, {{situation}}, etc.) dans ton dossier et valider d'un tap si ça te va 👍",
+      "proposal": null,
+      "propositions": [
+        "message"
+      ],
+      "outils": [
+        "get_listing",
+        "propose_contact_message"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
