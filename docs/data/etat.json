@@ -1,5 +1,7 @@
 {
-  "statut": {},
+  "statut": {
+    "seloger:262K14BI359H": "ecarte"
+  },
   "notes": {},
   "manuel": [
     {
@@ -383,8 +385,6 @@
       "photo": null
     }
   ],
-  "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-09-24T10:37:41.601Z",
   "rejetes": [
     "lbc:3256106358",
     "lbc:3272578697",
@@ -406,5 +406,8 @@
     "pap:465400225",
     "sl:26UN9BSFB757",
     "sl:26WF5AYKMMDH"
-  ]
+  ],
+  "contacts": {},
+  "vuJusqua": "2026-09-22T10:57:07.199Z",
+  "updatedAt": "2026-10-05T17:59:12.734Z"
 }
