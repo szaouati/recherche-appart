@@ -13,8 +13,20 @@
     // Ces deux fichiers sont désormais l'état PARTAGÉ entre tous les appareils (voir CLAUDE.md) :
     // le Worker seul les lit/écrit, le site ne passe plus jamais par son propre localStorage pour y écrire.
     "CRITERIA_PATH": "docs/criteria.json",
-    "ETAT_PATH": "docs/data/etat.json"
+    "ETAT_PATH": "docs/data/etat.json",
+    // Bot Telegram (worker/src/telegram.mjs) : heures des résumés, heure de Paris, et nombre max d'annonces par résumé.
+    "TELEGRAM_HEURES": "9,19",
+    "TELEGRAM_MAX_PAR_RESUME": "5",
+    "SITE_URL": "https://szaouati.github.io/recherche-appart/"
   },
+  // Mémoire du bot Telegram : identifiants de chat (Sacha, Tabatha), historique de conversation, propositions en
+  // attente, annonces déjà envoyées. Rien de tout ça ne va dans le dépôt (public).
+  "kv_namespaces": [
+    { "binding": "TG", "id": "5ad797ee4dce40439b2b1c4092bfa9de" }
+  ],
+  // Toutes les 30 min : lance la collecte GitHub Actions (le planning de GitHub saute la plupart des passages) ;
+  // à l'heure pile seulement, le Worker n'envoie un résumé qu'aux heures TELEGRAM_HEURES (heure d'été gérée).
+  "triggers": { "crons": ["*/30 * * * *"] },
   // 20 messages / minute par IP. period n'accepte que 10 ou 60 (contrainte Cloudflare).
   "ratelimits": [
     { "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } }

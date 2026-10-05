@@ -11,6 +11,8 @@
 import { mergeCriteria } from '../../docs/score.mjs';
 import { executerAgent, creerAppelAnthropic, validerCriteres as validerProposition, STATUTS_CONTACT } from './agent.mjs';
 import { cleAnnonce } from '../../collector/lib/cle-annonce.mjs';
+import { traiterUpdate, tacheHoraire, configurerWebhook } from './telegram.mjs';
+import { declencherCollecte } from './declencheur.mjs';
 
 const MAX_HISTORY = 12; // derniers messages envoyés en contexte (6 échanges)
 const MAX_MSG_LEN = 1500;
@@ -194,8 +196,154 @@ async function chargerDonneesAgent(env) {
   return { listings, meta, etat, criteria: critData };
 }
 
+// Écriture de l'état partagé, commune au site (POST kind:'etat') et au bot Telegram (boutons ♥/✕,
+// propositions validées). Renvoie { status, data } ; c'est l'appelant qui met en forme la réponse.
+export async function traiterEtat(env, ctx, body) {
+  try {
+    if (body.action === 'set_criteria') {
+      if (!body.criteria || typeof body.criteria !== 'object') return { data: { error: 'critères invalides' }, status: 400 };
+      const criteria = await ecrireCriteriaPartage(env, body.criteria);
+      ctx.waitUntil(appendJournal(env, {
+        kind: 'event', type: 'critere_change',
+        payload: { source: typeof body.source === 'string' ? body.source : 'app', diff: Array.isArray(body.diff) ? body.diff.slice(0, 20) : undefined },
+        criteria,
+      }));
+      return { data: { criteria, ...(await lireEtat(env)) }, status: 200 };
+    }
+
+    const id = typeof body.id === 'string' && body.id ? body.id.slice(0, 200) : null;
+    let etat;
+    let journalType = null;
+    let journalPayload = null;
+
+    if (body.action === 'set_statut') {
+      if (!id) return { data: { error: 'id manquant' }, status: 400 };
+      const valeur = ['fav', 'ecarte'].includes(body.valeur) ? body.valeur : null;
+      etat = await ecrireEtatMute(env, (e) => { if (valeur) e.statut[id] = valeur; else delete e.statut[id]; });
+      if (valeur) { journalType = valeur; journalPayload = { listingId: id, url: body.url, title: body.title, price: body.price }; }
+    } else if (body.action === 'set_note') {
+      if (!id) return { data: { error: 'id manquant' }, status: 400 };
+      const texte = String(body.texte ?? '').slice(0, 2000).trim();
+      etat = await ecrireEtatMute(env, (e) => { if (texte) e.notes[id] = texte; else delete e.notes[id]; });
+      journalType = 'note';
+      journalPayload = { listingId: id, url: body.url, title: body.title, note: texte };
+    } else if (body.action === 'set_vu') {
+      const ts = Number.isFinite(Date.parse(body.ts)) ? body.ts : new Date().toISOString();
+      etat = await ecrireEtatMute(env, (e) => { if (!e.vuJusqua || ts > e.vuJusqua) e.vuJusqua = ts; });
+    } else if (body.action === 'ajouter_manuel') {
+      const listing = construireAnnonceManuelle(body.listing);
+      etat = await ecrireEtatMute(env, (e) => { e.manuel.unshift(listing); e.manuel = e.manuel.slice(0, 200); });
+      journalType = 'ajout_manuel';
+      journalPayload = { url: listing.url, title: listing.title, price: listing.price };
+    } else if (body.action === 'set_contact') {
+      // Suivi de contact d'une annonce (contacté, réponse, visite…). statut null = retirer le suivi.
+      if (!id) return { data: { error: 'id manquant' }, status: 400 };
+      const statut = STATUTS_CONTACT.includes(body.statut) ? body.statut : null;
+      const note = String(body.note ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
+      const jours = body.relance_jours != null && body.relance_jours !== '' && Number(body.relance_jours) >= 1 ? Math.min(30, Math.round(Number(body.relance_jours))) : null; // null/0/absent = pas de nouvelle relance (Number(null) vaut 0 : ne pas le borner à 1 jour)
+      const visite = Number.isFinite(Date.parse(body.visite)) ? new Date(body.visite).toISOString() : null;
+      const canal = ['messagerie_annonce', 'email', 'sms', 'telephone'].includes(body.canal) ? body.canal : null;
+      etat = await ecrireEtatMute(env, (e) => {
+        if (!statut) { delete e.contacts[id]; return; }
+        const avant = e.contacts[id] ?? {};
+        e.contacts[id] = {
+          ...avant,
+          statut,
+          maj: new Date().toISOString(),
+          relance: jours ? new Date(Date.now() + jours * 864e5).toISOString() : (['reponse', 'refuse', 'sans_suite', 'visite'].includes(statut) ? null : avant.relance ?? null),
+          ...(visite ? { visite } : {}),
+          ...(note ? { note } : {}),
+          ...(canal ? { canal } : {}),
+        };
+      });
+      if (statut) { journalType = 'contact'; journalPayload = { listingId: id, statut, url: body.url, title: body.title }; }
+    } else if (body.action === 'supprimer_manuel') {
+      // Retire une annonce ajoutée à la main devenue indisponible (louée, retirée), et les
+      // favoris/notes qui lui étaient attachés. Réversible via l'historique git.
+      if (!id) return { data: { error: 'id manquant' }, status: 400 };
+      let existait = false;
+      etat = await ecrireEtatMute(env, (e) => {
+        const l = e.manuel.find((x) => x.id === id);
+        existait = Boolean(l);
+        const cle = l && cleAnnonce(l.url);
+        if (cle && !e.rejetes.includes(cle)) e.rejetes = [...e.rejetes, cle].slice(-1000);
+        e.manuel = e.manuel.filter((x) => x.id !== id);
+        delete e.statut[id];
+        delete e.notes[id];
+      });
+      if (!existait) return { data: { error: 'Annonce manuelle introuvable' }, status: 404 };
+    } else if (body.action === 'modifier_manuel') {
+      // Corrige un champ d'une annonce déjà ajoutée à la main (typiquement son url, quand on a
+      // pu récupérer le vrai lien après coup — ex. Leboncoin, dont le captcha empêche de le
+      // retrouver automatiquement au moment de l'ajout).
+      if (!id) return { data: { error: 'id manquant' }, status: 400 };
+      const patch = body.patch && typeof body.patch === 'object' ? body.patch : {};
+      const champsAutorises = ['url', 'title', 'price', 'surface', 'rooms', 'floor', 'dpe'];
+      let trouve = false;
+      etat = await ecrireEtatMute(env, (e) => {
+        const l = e.manuel.find((x) => x.id === id);
+        if (!l) return;
+        trouve = true;
+        if (typeof patch.url === 'string') l.url = patch.url.slice(0, 500);
+        if (typeof patch.title === 'string') l.title = patch.title.slice(0, 200);
+        for (const k of ['price', 'surface', 'rooms', 'floor']) if (patch[k] != null && Number.isFinite(Number(patch[k]))) l[k] = Number(patch[k]);
+        if (typeof patch.dpe === 'string' && /^[A-G]$/.test(patch.dpe)) l.dpe = patch.dpe;
+      });
+      if (!trouve) return { data: { error: 'Annonce manuelle introuvable' }, status: 404 };
+    } else {
+      return { data: { error: 'Action inconnue' }, status: 400 };
+    }
+
+    if (journalType) {
+      const criteria = mergeCriteria(body.criteria && typeof body.criteria === 'object' ? body.criteria : {});
+      ctx.waitUntil(appendJournal(env, { kind: 'event', type: journalType, payload: journalPayload, criteria, ...(body.canal === 'telegram' ? { canal: 'telegram' } : {}) }));
+    }
+    const { data: critData } = await lireJSON(env, env.CRITERIA_PATH || 'docs/criteria.json', {});
+    return { data: { criteria: mergeCriteria(critData), ...etat }, status: 200 };
+  } catch (e) {
+    console.error(e);
+    return { data: { error: "Échec de l'enregistrement partagé, réessaie." }, status: 502 };
+  }
+}
+
+// Ce dont le bot Telegram a besoin, branché sur les mêmes fonctions que le site.
+function outilsTelegram(env, ctx) {
+  return {
+    traiterEtat: (body) => traiterEtat(env, ctx, body),
+    appendJournal: (entry) => appendJournal(env, entry),
+    chargerDonnees: () => chargerDonneesAgent(env),
+    lireCriteres: async () => (await lireJSON(env, env.CRITERIA_PATH || 'docs/criteria.json', {})).data,
+    appelerModele: creerAppelAnthropic(env),
+  };
+}
+
 export default {
+  // Cron toutes les 30 min (wrangler.jsonc → triggers) : lance la collecte (declencheur.mjs) et, à l'heure pile,
+  // les résumés Telegram aux heures prévues, heure de Paris.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(declencherCollecte(env, event.scheduledTime).catch((e) => console.error('collecte: déclenchement', e)));
+    if (new Date(event.scheduledTime).getUTCMinutes() >= 30) return; // résumés Telegram : une fois par heure
+    ctx.waitUntil(tacheHoraire(env, outilsTelegram(env, ctx), event.scheduledTime).catch((e) => console.error('telegram: tâche horaire', e)));
+  },
+
   async fetch(request, env, ctx) {
+    // Telegram n'est pas un navigateur : pas d'Origin ni de jeton d'appli, mais une clé secrète en en-tête
+    // (TELEGRAM_WEBHOOK_SECRET, donnée à Telegram par /telegram/setup). Sans elle, rien n'est lu.
+    const { pathname, origin: origineWorker } = new URL(request.url);
+    if (pathname === '/telegram' && request.method === 'POST') {
+      if (!env.TELEGRAM_WEBHOOK_SECRET || request.headers.get('X-Telegram-Bot-Api-Secret-Token') !== env.TELEGRAM_WEBHOOK_SECRET) return new Response('Interdit', { status: 401 });
+      try {
+        await traiterUpdate(env, outilsTelegram(env, ctx), await request.json());
+      } catch (e) {
+        console.error('telegram: update', e);
+      }
+      return new Response('ok'); // toujours 200 : sinon Telegram renvoie la même mise à jour en boucle
+    }
+    if (pathname === '/telegram/setup' && request.method === 'GET') {
+      if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_WEBHOOK_SECRET || !env.TG) return json({ ok: false, error: 'Secrets TELEGRAM_* ou espace KV « TG » manquants' }, 500, {});
+      return json(await configurerWebhook(env, origineWorker), 200, {});
+    }
+
     const allowed = (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
     const origin = request.headers.get('Origin') || '';
     const headers = corsHeaders(origin, allowed);
@@ -239,111 +387,8 @@ export default {
     // renvoie l'état complet qui en résulte — c'est TOUJOURS cette réponse qui fait foi, jamais ce
     // que le navigateur avait localement, ce qui règle de lui-même les écritures simultanées.
     if (body.kind === 'etat') {
-      try {
-        if (body.action === 'set_criteria') {
-          if (!body.criteria || typeof body.criteria !== 'object') return json({ error: 'critères invalides' }, 400, headers);
-          const criteria = await ecrireCriteriaPartage(env, body.criteria);
-          ctx.waitUntil(appendJournal(env, {
-            kind: 'event', type: 'critere_change',
-            payload: { source: typeof body.source === 'string' ? body.source : 'app', diff: Array.isArray(body.diff) ? body.diff.slice(0, 20) : undefined },
-            criteria,
-          }));
-          return json({ criteria, ...(await lireEtat(env)) }, 200, headers);
-        }
-
-        const id = typeof body.id === 'string' && body.id ? body.id.slice(0, 200) : null;
-        let etat;
-        let journalType = null;
-        let journalPayload = null;
-
-        if (body.action === 'set_statut') {
-          if (!id) return json({ error: 'id manquant' }, 400, headers);
-          const valeur = ['fav', 'ecarte'].includes(body.valeur) ? body.valeur : null;
-          etat = await ecrireEtatMute(env, (e) => { if (valeur) e.statut[id] = valeur; else delete e.statut[id]; });
-          if (valeur) { journalType = valeur; journalPayload = { listingId: id, url: body.url, title: body.title, price: body.price }; }
-        } else if (body.action === 'set_note') {
-          if (!id) return json({ error: 'id manquant' }, 400, headers);
-          const texte = String(body.texte ?? '').slice(0, 2000).trim();
-          etat = await ecrireEtatMute(env, (e) => { if (texte) e.notes[id] = texte; else delete e.notes[id]; });
-          journalType = 'note';
-          journalPayload = { listingId: id, url: body.url, title: body.title, note: texte };
-        } else if (body.action === 'set_vu') {
-          const ts = Number.isFinite(Date.parse(body.ts)) ? body.ts : new Date().toISOString();
-          etat = await ecrireEtatMute(env, (e) => { if (!e.vuJusqua || ts > e.vuJusqua) e.vuJusqua = ts; });
-        } else if (body.action === 'ajouter_manuel') {
-          const listing = construireAnnonceManuelle(body.listing);
-          etat = await ecrireEtatMute(env, (e) => { e.manuel.unshift(listing); e.manuel = e.manuel.slice(0, 200); });
-          journalType = 'ajout_manuel';
-          journalPayload = { url: listing.url, title: listing.title, price: listing.price };
-        } else if (body.action === 'set_contact') {
-          // Suivi de contact d'une annonce (contacté, réponse, visite…). statut null = retirer le suivi.
-          if (!id) return json({ error: 'id manquant' }, 400, headers);
-          const statut = STATUTS_CONTACT.includes(body.statut) ? body.statut : null;
-          const note = String(body.note ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
-          const jours = body.relance_jours != null && body.relance_jours !== '' && Number(body.relance_jours) >= 1 ? Math.min(30, Math.round(Number(body.relance_jours))) : null; // null/0/absent = pas de nouvelle relance (Number(null) vaut 0 : ne pas le borner à 1 jour)
-          const visite = Number.isFinite(Date.parse(body.visite)) ? new Date(body.visite).toISOString() : null;
-          const canal = ['messagerie_annonce', 'email', 'sms', 'telephone'].includes(body.canal) ? body.canal : null;
-          etat = await ecrireEtatMute(env, (e) => {
-            if (!statut) { delete e.contacts[id]; return; }
-            const avant = e.contacts[id] ?? {};
-            e.contacts[id] = {
-              ...avant,
-              statut,
-              maj: new Date().toISOString(),
-              relance: jours ? new Date(Date.now() + jours * 864e5).toISOString() : (['reponse', 'refuse', 'sans_suite', 'visite'].includes(statut) ? null : avant.relance ?? null),
-              ...(visite ? { visite } : {}),
-              ...(note ? { note } : {}),
-              ...(canal ? { canal } : {}),
-            };
-          });
-          if (statut) { journalType = 'contact'; journalPayload = { listingId: id, statut, url: body.url, title: body.title }; }
-        } else if (body.action === 'supprimer_manuel') {
-          // Retire une annonce ajoutée à la main devenue indisponible (louée, retirée), et les
-          // favoris/notes qui lui étaient attachés. Réversible via l'historique git.
-          if (!id) return json({ error: 'id manquant' }, 400, headers);
-          let existait = false;
-          etat = await ecrireEtatMute(env, (e) => {
-            const l = e.manuel.find((x) => x.id === id);
-            existait = Boolean(l);
-            const cle = l && cleAnnonce(l.url);
-            if (cle && !e.rejetes.includes(cle)) e.rejetes = [...e.rejetes, cle].slice(-1000);
-            e.manuel = e.manuel.filter((x) => x.id !== id);
-            delete e.statut[id];
-            delete e.notes[id];
-          });
-          if (!existait) return json({ error: 'Annonce manuelle introuvable' }, 404, headers);
-        } else if (body.action === 'modifier_manuel') {
-          // Corrige un champ d'une annonce déjà ajoutée à la main (typiquement son url, quand on a
-          // pu récupérer le vrai lien après coup — ex. Leboncoin, dont le captcha empêche de le
-          // retrouver automatiquement au moment de l'ajout).
-          if (!id) return json({ error: 'id manquant' }, 400, headers);
-          const patch = body.patch && typeof body.patch === 'object' ? body.patch : {};
-          const champsAutorises = ['url', 'title', 'price', 'surface', 'rooms', 'floor', 'dpe'];
-          let trouve = false;
-          etat = await ecrireEtatMute(env, (e) => {
-            const l = e.manuel.find((x) => x.id === id);
-            if (!l) return;
-            trouve = true;
-            if (typeof patch.url === 'string') l.url = patch.url.slice(0, 500);
-            if (typeof patch.title === 'string') l.title = patch.title.slice(0, 200);
-            for (const k of ['price', 'surface', 'rooms', 'floor']) if (patch[k] != null && Number.isFinite(Number(patch[k]))) l[k] = Number(patch[k]);
-            if (typeof patch.dpe === 'string' && /^[A-G]$/.test(patch.dpe)) l.dpe = patch.dpe;
-          });
-          if (!trouve) return json({ error: 'Annonce manuelle introuvable' }, 404, headers);
-        } else {
-          return json({ error: 'Action inconnue' }, 400, headers);
-        }
-
-        if (journalType) {
-          const criteria = mergeCriteria(body.criteria && typeof body.criteria === 'object' ? body.criteria : {});
-          ctx.waitUntil(appendJournal(env, { kind: 'event', type: journalType, payload: journalPayload, criteria }));
-        }
-        const { data: critData } = await lireJSON(env, env.CRITERIA_PATH || 'docs/criteria.json', {});
-        return json({ criteria: mergeCriteria(critData), ...etat }, 200, headers);
-      } catch (e) {
-        console.error(e);
-        return json({ error: "Échec de l'enregistrement partagé, réessaie." }, 502, headers);
-      }
+      const r = await traiterEtat(env, ctx, body);
+      return json(r.data, r.status, headers);
     }
 
     // Simple fait à consigner qui ne fait pas partie de l'état partagé (avis 👍/👎 sur la mascotte) :

@@ -89,7 +89,8 @@ message à lui envoyer ».
    que le bot semble à l'arrêt plutôt que de produire un top 10 sur des données mortes).
 3. Exclure : les annonces déjà écartées (lire `docs/data/etat.json` → `statut[id] === 'ecarte'`,
    partagé et à jour depuis le 23/09/2026 — plus besoin de déduire ça des événements du journal), et
-   celles déjà signalées dans un top précédent (chercher les entrées `kind:'top10_envoye'`).
+   celles déjà signalées dans un top précédent (chercher les entrées `kind:'top10_envoye'`) ou déjà envoyées
+   par le bot Telegram (`kind:'telegram_envoye'`).
 4. Prendre les 10 meilleures parmi les non-écartées et pas-déjà-signalées, en tenant compte des
    avis exprimés dans le journal (un commentaire négatif sur un quartier, un 👎 sur un critère…).
 5. Rédiger un message WhatsApp prêt à copier-coller, à donner à Sacha (jamais à envoyer soi-même :
@@ -200,6 +201,30 @@ générateur de critères. Détail et coûts : README.md § « L'agent du chat �
 - **Vérifier l'agent avec le vrai modèle après tout redéploiement** (`cd worker && npx wrangler deploy`, fait par Sacha) : les
   tests utilisent un faux modèle. Essais types : « pourquoi si peu d'annonces ? », « garde mes 2 meilleures », « rédige un
   message pour cette annonce », « compare les 3 moins chères », « est-ce une arnaque ? ».
+
+## Runbook — le bot Telegram (ajouté le 04/10/2026)
+
+Choix de Sacha : résumés **matin + soir** (9 h et 19 h, `TELEGRAM_HEURES`), envoyés **directement à Tabatha** (sans
+relecture de Sacha), **l'appli reste en parallèle**. Détail technique : README.md § « Bot Telegram ».
+
+- Même agent, mêmes règles : le bot ne modifie rien sans un tap sur « ✔ Appliquer » ; jamais d'envoi de message
+  à un propriétaire ; « Mon dossier » ne passe jamais par Telegram (les brouillons gardent les `{{…}}`).
+- Lire ses échanges Telegram : journal, entrées `kind:'chat', canal:'telegram'` (`qui:'sacha'` = essais de Sacha,
+  à ignorer pour une revue de retours). Ses ♥/✕ venus de Telegram ont `canal:'telegram'`.
+- Les résumés ne passent pas par le filtre qualité de Sacha : les annonces au prix suspect y portent un ⚠️. Si une
+  annonce douteuse est partie, la retirer comme d'habitude (`supprimer_manuel` / `rejetes`).
+- Après toute modification de `worker/` : `node --test test/*.test.mjs`, puis Sacha déploie (`cd worker && npx wrangler
+  deploy`). Le webhook n'est à rebrancher (`/telegram/setup`) que si l'URL du Worker change.
+- Réinitialiser l'accès (ex. mauvais compte devenu admin) : `npx wrangler kv key delete --remote --binding TG role:admin`
+  (ou `role:tabatha`) puis refaire `/start`.
+
+## Runbook — déclencheur de collecte (ajouté le 05/10/2026)
+
+Le planning (`schedule`) de GitHub Actions saute la plupart des passages (2-4/jour au lieu de 32 constatés le 05/10).
+Le cron du Worker (`*/30 * * * *`, `worker/src/declencheur.mjs`) lance donc `collect.yml` via `workflow_dispatch` :
+`quick` de 7 h à 23 h (Paris), `full` à 5 h. Secret `ACTIONS_TOKEN` (jeton fine-grained, Actions : lecture/écriture sur
+ce seul dépôt), posé par Sacha avec `wrangler secret put`. Sans lui, repli sur `GITHUB_TOKEN` (sans doute insuffisant).
+Données qui semblent figées : regarder `meta.generatedAt`, puis `gh run list --workflow="Collecte des annonces"`.
 
 ## Règles non négociables
 

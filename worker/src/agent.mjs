@@ -219,21 +219,25 @@ const SYSTEM_STATIQUE = [
   "9. Chiffres du marché : uniquement ceux fournis par market_snapshot, présentés comme « sur les annonces que je suis ». N'invente aucun loyer de référence, plafond d'encadrement ou statistique externe. Les données ne contiennent que les annonces sous son budget : ne dis jamais « le loyer moyen est X » ; dis « parmi les annonces à moins de N € que je suis… ». Décris les chiffres sans qualifier le marché de « tendu », « détendu » ou « cher » : tu n'as pas de base de comparaison pour ça.",
 ].join('\n');
 
-function systemComplet(criteres, maintenant) {
+// Consignes propres au canal Telegram : mêmes règles, mais les propositions s'y valident par des boutons
+// sous le message, et le texte ne passe pas par le rendu markdown du site.
+const SYSTEM_TELEGRAM = "Canal : tu lui parles sur Telegram (pas dans l'appli). Tes propositions apparaissent sous ton message avec un bouton « ✔ Appliquer » : dis-lui de taper dessus. Deux fois par jour, le bot lui envoie les nouvelles annonces avec ♥/✕ ; si elle parle d'« la 2 » ou « la dernière », appuie-toi sur la liste envoyée rappelée dans l'historique. Pour les photos, la carte ou « Mon dossier », renvoie-la vers l'appli.";
+
+function systemComplet(criteres, maintenant, canal) {
   return [
     { type: 'text', text: SYSTEM_STATIQUE, cache_control: { type: 'ephemeral' } },
-    { type: 'text', text: `Nous sommes le ${new Date(maintenant).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' })}.\nCritères actuels (JSON) : ${JSON.stringify(criteres)}` },
+    { type: 'text', text: `${canal === 'telegram' ? SYSTEM_TELEGRAM + '\n' : ''}Nous sommes le ${new Date(maintenant).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' })}.\nCritères actuels (JSON) : ${JSON.stringify(criteres)}` },
   ];
 }
 
 // --- Contexte de données (chargé une seule fois par requête, à la demande) ---------------------------
-function quartierDe(l) {
+export function quartierDe(l) {
   if (l.district) return l.district;
   const p = String(l.title ?? '').split(' — ');
   return p.length >= 3 ? p[p.length - 1] : p.length === 2 ? p[1] : null;
 }
 
-function construireContexte(donnees, maintenant) {
+export function construireContexte(donnees, maintenant) {
   const { listings = [], meta = {}, etat = {}, criteria } = donnees;
   const criteres = mergeCriteria(criteria ?? {});
   const e = { statut: {}, notes: {}, manuel: [], contacts: {}, ...etat };
@@ -659,10 +663,11 @@ const MSG_PROPOSITION = { ok: true, message: "Proposition enregistrée : elle s'
  * @param {string} p.message
  * @param {Array<{role,content}>} p.history
  * @param {object} p.criteresClient - critères vus par le navigateur (repli si le dépôt est illisible)
+ * @param {'app'|'telegram'} [p.canal] - d'où vient le message (ajuste les consignes de présentation)
  * @param {object} deps - { chargerDonnees(): Promise<{listings, meta, etat, criteria}>, appelerModele({system, messages, tools}): Promise<réponse API>, maintenant?: () => number }
  * @returns {Promise<{reply: string, propositions: object[], proposal: object|null, outils: string[]}>}
  */
-export async function executerAgent({ message, history = [], criteresClient = {}, deps }) {
+export async function executerAgent({ message, history = [], criteresClient = {}, canal = 'app', deps }) {
   const debut = Date.now();
   const maintenant = deps.maintenant ? deps.maintenant() : Date.now();
   // Les annonces (≈ 500 Ko) ne sont chargées et classées que si un outil de lecture est réellement appelé :
@@ -681,7 +686,7 @@ export async function executerAgent({ message, history = [], criteresClient = {}
     return contexte;
   };
 
-  const system = systemComplet(mergeCriteria(criteresClient), maintenant);
+  const system = systemComplet(mergeCriteria(criteresClient), maintenant, canal);
   const tools = TOUS_LES_OUTILS.map((t, i, arr) => (i === arr.length - 1 ? { ...t, cache_control: { type: 'ephemeral' } } : t));
   const msgs = [...history, { role: 'user', content: message }];
   const sortie = { propositions: [] };

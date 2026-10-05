@@ -31,17 +31,34 @@ GitHub Actions (cron 30 min)  →  collector/collect.mjs  →  docs/data/listing
 3. **Actions → Collecte des annonces → Run workflow** (mode `full`) pour remplir la base une première fois.
 4. Le site est à `https://<compte>.github.io/<dépôt>/`.
 
-### Alertes Telegram
+### Bot Telegram (depuis le 04/10/2026, `worker/src/telegram.mjs`)
 
-1. Sur Telegram, écrire à **@BotFather** → `/newbot` → noter le **jeton**.
-2. Tabatha écrit un message quelconque à son nouveau bot, puis ouvrir
-   `https://api.telegram.org/bot<JETON>/getUpdates` et noter `chat.id`.
-3. Dépôt → **Settings → Secrets and variables → Actions** : secrets `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID`,
-   et (onglet Variables) `SITE_URL` avec l'adresse du site.
+Le Worker sert aussi de bot Telegram : une deuxième porte d'entrée sur le **même** état partagé et le **même** agent
+que le chat du site.
 
-Règles d'alerte : annonce **nouvelle**, publiée il y a moins de 3 jours, qui passe tous les filtres stricts, avec un
-score ≥ seuil (55 par défaut), pas un doublon. Maximum 8 messages par passage. Le premier passage ne notifie rien
-(il remplit simplement la base).
+- **Résumés** : cron horaire du Worker ; aux heures `TELEGRAM_HEURES` (heure de Paris, défaut `9,19`), envoie à
+  Tabatha au plus `TELEGRAM_MAX_PAR_RESUME` annonces visibles, qui passent ses critères, ni gardées ni écartées, et
+  jamais envoyées (KV `envoyes` + journal `kind:'telegram_envoye'`). Une carte par annonce : ♥ Garder / ✕ Écarter /
+  🔗 Voir. Rien de neuf ⇒ silence. Collecte de plus de 12 h ⇒ rien pour Tabatha, un avertissement à Sacha.
+- **Messages libres** → `executerAgent` (`canal:'telegram'`). Les propositions arrivent avec « ✔ Appliquer » /
+  « Non merci » (brouillon de contact : « ✔ J'ai envoyé »), appliquées via `traiterEtat` comme dans l'appli. Répondre
+  à une carte dit à l'agent de quelle annonce elle parle ; la dernière liste envoyée lui est rappelée.
+- **Accès** : le premier `/start` reçu devient administrateur (Sacha) ; toute autre personne qui fait `/start`
+  déclenche une demande que Sacha accepte (« C'est Tabatha ») ou refuse. Le bot ignore tout autre inconnu.
+- **Stockage** : KV `TG` (identifiants de chat, historique 12 messages / 7 j, propositions en attente 14 j, annonces
+  envoyées). Rien de tout ça dans le dépôt. Le journal (public) reçoit les échanges avec `canal:'telegram'` et
+  `qui:'tabatha'|'sacha'` — c'est annoncé dans le message d'accueil du bot.
+- **Sécurité** : `POST /telegram` exige l'en-tête `X-Telegram-Bot-Api-Secret-Token` = `TELEGRAM_WEBHOOK_SECRET`.
+  `GET /telegram/setup` (re)branche le webhook sur ce Worker, à appeler une fois après chaque déploiement qui change
+  l'URL ; il ne renvoie rien de sensible.
+
+Mise en place (faite le 04/10/2026) : jeton BotFather → `wrangler secret put TELEGRAM_BOT_TOKEN` ;
+`openssl rand -hex 32 | npx wrangler secret put TELEGRAM_WEBHOOK_SECRET` ; `wrangler kv namespace create TG` (id dans
+`wrangler.jsonc`) ; `npx wrangler deploy` ; ouvrir `https://<worker>/telegram/setup` ; Sacha puis Tabatha envoient `/start`.
+
+L'ancienne alerte Telegram du collecteur (`collector/notify.mjs`, secrets GitHub `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`,
+jamais configurés) est **remplacée** par le bot : ne pas configurer ces secrets GitHub, sinon Tabatha recevrait les
+annonces en double.
 
 WhatsApp : pas d'API officielle gratuite pour envoyer à un particulier. Telegram est le choix pragmatique.
 
