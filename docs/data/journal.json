@@ -2471,6 +2471,52 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-10-05T18:00:03.672Z",
+      "kind": "event",
+      "type": "ecarte",
+      "payload": {
+        "listingId": "leboncoin:3280652505",
+        "url": "https://www.leboncoin.fr/ad/locations/3280652505",
+        "title": "Appartement 1 p. 17 m² — Barbès - Château Rouge",
+        "price": 700
+      },
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
