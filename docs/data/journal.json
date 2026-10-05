@@ -2655,6 +2655,55 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-10-05T18:11:39.010Z",
+      "kind": "chat",
+      "message": "Rédige-moi un message de contact pour cette annonce : 850 € · 21 m² · Location appartement 1 p. 21 m² — Paris 18e (réf pap:443003823).",
+      "reply": "Voilà, je te propose ce message pour l'annonce à 850 € dans le 18e : tu te présentes, tu demandes l'étage, l'ascenseur et le DPE (infos manquantes), et tu proposes une visite. Complète tes infos perso dans ton dossier et il ne te restera qu'à valider et envoyer 😊",
+      "proposal": null,
+      "propositions": [
+        "message"
+      ],
+      "outils": [
+        "get_listing",
+        "propose_contact_message"
+      ],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
