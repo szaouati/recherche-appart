@@ -9,6 +9,7 @@ import { mergeCriteria, rankListings } from '../docs/score.mjs';
 import { fetchBienici, verifierDisponibilite } from './sources/bienici.mjs';
 import { fetchEmail } from './sources/email.mjs';
 import { cleAnnonce } from './lib/cle-annonce.mjs';
+import { confirmerParJumelle } from './lib/jumeaux.mjs';
 import { formatAlert, sendTelegram, telegramConfigured } from './notify.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -139,6 +140,10 @@ async function main() {
     }
     if (retirees) console.log(`  ${retirees} annonce(s) Bien'ici retirée(s) du marché (fiche indisponible), exclue(s).`);
   }
+
+  const refJumelles = mode === 'full' ? now.getTime() : new Date(db.meta?.lastFullAt ?? nowIso).getTime();
+  const jum = confirmerParJumelle(known, refJumelles, nowIso);
+  console.log(`  Jumelles Bien'ici : ${jum.confirmees} annonce(s) d'e-mail confirmée(s), ${jum.retirees} retirée(s) (jumelle disparue).`);
 
   const listings = [...known.values()].filter((l) => new Date(l.last_seen).getTime() > limite);
 
