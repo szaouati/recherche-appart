@@ -5,7 +5,8 @@
     "leboncoin:3280652505": "ecarte",
     "pap:465501946": "ecarte",
     "seloger:26P2RBUQGA2E": "fav",
-    "seloger:264QEKGKV36S": "ecarte"
+    "seloger:264QEKGKV36S": "ecarte",
+    "pap:443003823": "fav"
   },
   "notes": {},
   "manuel": [
@@ -414,5 +415,5 @@
   ],
   "contacts": {},
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-10-05T18:11:07.361Z"
+  "updatedAt": "2026-10-05T18:24:22.035Z"
 }
