@@ -2808,6 +2808,18 @@
         "leboncoin:3280977706"
       ],
       "moment": "matin"
+    },
+    {
+      "ts": "2026-10-06T17:01:39.065Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "leboncoin:3283422065",
+        "seloger:268S916M3WJ2",
+        "seloger:26D81XJS8FBW",
+        "seloger:26ML9UK2BDBP",
+        "seloger:26BI7UI969DH"
+      ],
+      "moment": "soir"
     }
   ]
 }
