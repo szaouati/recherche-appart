@@ -2878,6 +2878,18 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-10-07T17:01:20.220Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "seloger:26YN6XSN7AGX",
+        "seloger:26VJDT42VJU7",
+        "seloger:266IQPZHA77L",
+        "pap:415100528",
+        "seloger:26Q25A8VZ9PN"
+      ],
+      "moment": "soir"
     }
   ]
 }
