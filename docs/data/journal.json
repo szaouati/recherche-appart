@@ -2832,6 +2832,52 @@
         "leboncoin:3283095903"
       ],
       "moment": "matin"
+    },
+    {
+      "ts": "2026-10-07T09:52:49.265Z",
+      "kind": "event",
+      "type": "ecarte",
+      "payload": {
+        "listingId": "leboncoin:3283356298",
+        "url": "https://www.leboncoin.fr/ad/locations/3283356298",
+        "title": "Appartement 1 p. 27 m² — Montmartre - Sacré Coeur - Abbesses",
+        "price": 300
+      },
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
