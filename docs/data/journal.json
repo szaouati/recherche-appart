@@ -2902,6 +2902,18 @@
         "seloger:268YR82VKXM8"
       ],
       "moment": "matin"
+    },
+    {
+      "ts": "2026-10-08T17:01:10.391Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "seloger:26P12IEKXA9L",
+        "seloger:24F9L9GGUTIF",
+        "seloger:26N7WBLNQY8N",
+        "seloger:266LDIQBX6EL",
+        "manuel:1790178227304"
+      ],
+      "moment": "soir"
     }
   ]
 }
