@@ -108,25 +108,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790178251498",
-      "source": "Manuel",
-      "url": "https://www.leboncoin.fr/ad/locations/3200973520",
-      "title": "Leboncoin (recherche) — 790€, 18m², 1p — Porte de Montmartre",
-      "price": 790,
-      "surface": 18,
-      "rooms": 1,
-      "arrondissement": 18,
-      "floor": 2,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-23T15:44:11.498Z",
-      "last_seen": "2026-09-23T15:44:11.498Z",
-      "publishedAt": "2026-09-23T15:44:11.498Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790178239809",
       "source": "Manuel",
       "url": "https://www.leboncoin.fr/ad/locations/3275059375",
@@ -250,9 +231,10 @@
     "sl:268E2UKTH45G",
     "sl:26X3JSUF4KM5",
     "lbc:3265875007",
-    "lbc:3253868198"
+    "lbc:3253868198",
+    "lbc:3200973520"
   ],
   "contacts": {},
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-10-09T14:38:54.336Z"
+  "updatedAt": "2026-10-09T14:38:59.402Z"
 }
