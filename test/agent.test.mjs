@@ -413,3 +413,18 @@ test('outils de lecture : get_search_overview et market_snapshot sont déclarés
   const noms = OUTILS_LECTURE.map((o) => o.name);
   assert.ok(noms.includes('get_search_overview') && noms.includes('market_snapshot'));
 });
+
+test('list_listings statut favoris : inclut un favori sorti de la fenêtre de visibilité, marqué « peut avoir disparu »', async () => {
+  const vieux = '2026-09-10T08:00:00Z';
+  const donnees = {
+    listings: [...LISTINGS, annonce('seloger:mail', { source: 'SeLoger', first_seen: vieux, last_seen: vieux })],
+    meta: META, criteria: CRITERIA,
+    etat: { ...ETAT, statut: { 'bienici:a2': 'fav', 'seloger:mail': 'fav' } },
+  };
+  const a = agent([[outil('list_listings', { statut: 'favoris' })], texteFinal('ok')], { donnees });
+  await a.lancer('Mes favoris ?');
+  const [r] = dernierResultat(a.modele.appels[1].messages);
+  assert.deepEqual(r.annonces.map((l) => l.id).sort(), ['bienici:a2', 'seloger:mail']);
+  assert.equal(r.annonces.find((l) => l.id === 'seloger:mail').peut_avoir_disparu, true);
+  assert.equal(r.annonces.find((l) => l.id === 'bienici:a2').peut_avoir_disparu, undefined);
+});

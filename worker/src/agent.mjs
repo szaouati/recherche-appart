@@ -289,7 +289,13 @@ function trouver(c, ref) {
 // --- Outils de lecture ------------------------------------------------------------------------------
 function listListings(c, a) {
   const statutFiltre = a.statut ?? 'non_ecartees';
-  let liste = (a.inclure_rejetees ? c.visibles : c.ok).filter((l) => {
+  // Favoris, écartées et annonces suivies : TOUTES celles qu'elle a marquées, comme l'onglet Favoris/Suivi de l'appli,
+  // même si elles ne sont plus dans la fenêtre de visibilité (une annonce d'e-mail n'y reste que 3 jours) — sinon
+  // « mes favoris » répond « aucun » alors qu'elle en a.
+  const parSonStatut = ['favoris', 'ecartees', 'a_contacter', 'contactees'].includes(statutFiltre);
+  const base = parSonStatut ? c.classees : a.inclure_rejetees ? c.visibles : c.ok;
+  const visibles = new Set(c.visibles.map((l) => l.id));
+  let liste = base.filter((l) => {
     const st = c.e.statut[l.id];
     const ct = c.e.contacts[l.id]?.statut;
     if (statutFiltre === 'non_ecartees' && st === 'ecarte') return false;
@@ -317,7 +323,12 @@ function listListings(c, a) {
   return {
     total_correspondant: liste.length,
     affichees: Math.min(limite, liste.length),
-    annonces: liste.slice(0, limite).map((l) => ({ ...resume(l, c), ...(l.ok ? {} : { rejetee_car: l.rejets }) })),
+    annonces: liste.slice(0, limite).map((l) => ({
+      ...resume(l, c),
+      ...(l.ok ? {} : { rejetee_car: l.rejets }),
+      // Plus vue par la collecte récemment : peut-être louée, à vérifier en ouvrant le lien avant de la contacter.
+      ...(parSonStatut && !visibles.has(l.id) ? { peut_avoir_disparu: true } : {}),
+    })),
   };
 }
 
