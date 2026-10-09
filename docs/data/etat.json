@@ -13,25 +13,6 @@
   "notes": {},
   "manuel": [
     {
-      "id": "manuel:1790233644777",
-      "source": "Manuel",
-      "url": "https://www.seloger.com/annonce/location/ile-de-france/paris-75/paris-75000/26EFZEE7G3EL",
-      "title": "SeLoger — 750€ (exclusivité Agences de France) — détails non chargés dans l'export, à ouvrir pour vérifier (18e)",
-      "price": 750,
-      "surface": null,
-      "rooms": null,
-      "arrondissement": 18,
-      "floor": null,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-24T07:07:24.777Z",
-      "last_seen": "2026-09-24T07:07:24.777Z",
-      "publishedAt": "2026-09-24T07:07:24.777Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790233642001",
       "source": "Manuel",
       "url": "https://www.seloger.com/annonce/location/ile-de-france/paris-75/paris-75000/263J1R1FE36Z",
@@ -395,9 +376,10 @@
     "pap:465400225",
     "sl:26UN9BSFB757",
     "sl:26WF5AYKMMDH",
-    "pap:465400898"
+    "pap:465400898",
+    "sl:26EFZEE7G3EL"
   ],
   "contacts": {},
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-10-09T14:38:14.506Z"
+  "updatedAt": "2026-10-09T14:38:19.237Z"
 }
