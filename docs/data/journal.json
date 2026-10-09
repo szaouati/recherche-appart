@@ -2971,6 +2971,50 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-10-09T15:01:40.315Z",
+      "kind": "chat",
+      "message": "[test Sacha] comment j'écris à tous mes favoris d'un coup ?",
+      "reply": "Salut ! Pour contacter tous tes favoris d'un coup, voici comment faire :\n\n- Va dans l'onglet **Favoris**\n- Clique sur **« ✉️ Contacter mes favoris »**\n- Le site te génère un brouillon de message par annonce\n- Pour chacune : tu copies le message → tu ouvres l'annonce → tu colles et envoies → puis tu coches **« J'ai envoyé ✔ »**\n\nComme ça tu gardes la main sur chaque envoi, rien ne part automatiquement. Si tu veux, je peux te rédiger un message type pour un ou plusieurs de tes favoris 😊",
+      "proposal": null,
+      "propositions": [],
+      "outils": [],
+      "criteria": {
+        "budgetMax": 900,
+        "surfaceMin": 10,
+        "piecesMin": 1,
+        "arrondissements": [
+          18
+        ],
+        "arrondissementsPref": [
+          18
+        ],
+        "meuble": "indifferent",
+        "exclure": {
+          "rdc": true,
+          "dpeFG": true,
+          "coloc": true
+        },
+        "poids": {
+          "prix": 3,
+          "prixM2": 2,
+          "surface": 2,
+          "arrondissementsPref": 2,
+          "balcon": 3,
+          "ascenseur": 2,
+          "etageEleve": 2,
+          "dpe": 2,
+          "lumineux": 2,
+          "calme": 1,
+          "traversant": 1,
+          "cave": 1,
+          "parking": 0,
+          "parquet": 1
+        },
+        "alerteActive": true,
+        "alerteScoreMin": 66
+      }
     }
   ]
 }
