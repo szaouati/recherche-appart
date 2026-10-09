@@ -278,6 +278,13 @@ dialog#dlg-bot { height: min(680px, 84vh); }
 .bot-proposal .brouillon { width: 100%; margin: 6px 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 16px/1.4 var(--sans); }
 .bot-proposal .avert { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 6px 8px; }
 .bot-proposal p { margin: 4px 0; }
+/* « Contacter mes favoris » (js/contacts.mjs) */
+.cf-ouvrir { width: 100%; margin-top: 4px; }
+#contacts-corps .brouillon { width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 16px/1.4 var(--sans); }
+#contacts-corps .avert { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 6px 8px; }
+#contacts-corps .dlg-actions { flex-wrap: wrap; }
+.cf-annonce { font-size: 14px; } .cf-annonce small { color: var(--muted); margin-left: 4px; }
+.appareil-id { font-variant-numeric: tabular-nums; }
 .bot-form { display: flex; gap: 8px; align-items: flex-end; margin-top: 8px; flex-shrink: 0; }
 .bot-form textarea { flex: 1; resize: none; max-height: 120px; min-height: var(--cible); margin: 0; border-radius: 14px; } /* 16 px : évite le zoom auto de Safari iOS au focus */
 .bot-idees { flex-shrink: 0; margin-top: 6px; max-height: 38vh; overflow-y: auto; font-size: 13px; }

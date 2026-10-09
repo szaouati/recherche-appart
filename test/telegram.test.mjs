@@ -90,6 +90,7 @@ function creerEnv({ listings = [], meta } = {}) {
           fichiers.set('docs/data/journal.json', { sha: `sha${++sha}`, content: { entries } });
         },
         chargerDonnees: async () => ({ listings: fichiers.get('docs/data/listings.json').content.listings, meta: fichiers.get('docs/data/listings.json').content.meta, etat: h.etat(), criteria: {} }),
+        idsDejaSignales: async () => h.journal().filter((x) => ['top10_envoye', 'telegram_envoye'].includes(x.kind)).flatMap((x) => x.ids),
       };
       await tacheHoraire(env, o, Date.parse(iso));
     },
@@ -192,6 +193,24 @@ test('résumé de 9 h : meilleures annonces non écartées, une carte chacune, p
   await h.horaire(instantParis(19)); // 19 h : plus rien de neuf → silence
   await h.horaire(instantParis(12)); // 12 h : pas une heure prévue
   assert.equal(h.envoisA(TABATHA).length, 0);
+});
+
+test('résumé : ni annonce déjà donnée dans un top 10 WhatsApp, ni annonce de plus de 7 jours ; bouton « Dans l’appli »', async () => {
+  const ilYa = (j) => new Date(Date.now() - j * 864e5).toISOString();
+  const h = creerEnv({ listings: [
+    annonce('bienici:neuve'),
+    annonce('bienici:top10'),
+    annonce('bienici:vieille', { first_seen: ilYa(10) }),
+  ] });
+  await h.brancher();
+  h.fichiers.set('docs/data/etat.json', { sha: 'e0', content: { statut: {}, manuel: [{ ...annonce('manuel:1'), source: 'Manuel', first_seen: ilYa(16), last_seen: ilYa(16) }] } });
+  h.fichiers.set('docs/data/journal.json', { sha: 'j0', content: { entries: [{ ts: ilYa(15), kind: 'top10_envoye', ids: ['bienici:top10'] }] } });
+
+  await h.horaire(instantParis(9));
+  assert.deepEqual(h.journal().at(-1).ids, ['bienici:neuve']);
+  const carte = h.envoisA(TABATHA)[1];
+  const liens = carte.params.reply_markup.inline_keyboard[1];
+  assert.equal(liens[1].url, 'https://site.test/?src=tg#/annonce/bienici%3Aneuve');
 });
 
 test('données de collecte vieilles de plus de 12 h : Sacha est prévenu, Tabatha ne reçoit rien', async () => {

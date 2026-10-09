@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app.css?v=55cd88a5">
+  <link rel="stylesheet" href="app.css?v=5fc22bf8">
 
   <!-- Installation sur l'écran d'accueil (PWA) -->
   <link rel="manifest" href="manifest.json">
@@ -90,6 +90,8 @@
       <label>Ma situation <textarea name="situation" rows="2" maxlength="300" placeholder="Ex. étudiante en master, garant parental, dossier complet"></textarea></label>
       <label>Téléphone <input name="telephone" type="tel" autocomplete="tel" maxlength="30"></label>
       <label>Mes disponibilités pour visiter <textarea name="disponibilites" rows="2" maxlength="300" placeholder="Ex. en semaine après 18h, samedi toute la journée"></textarea></label>
+      <label>Lien vers mon dossier <small>(facultatif)</small> <input name="lien_dossier" type="url" inputmode="url" maxlength="300" placeholder="https://www.dossierfacile.logement.gouv.fr/…"></label>
+      <p class="hint">Pour les pièces (bulletins, garant…), crée ton dossier sur <a href="https://www.dossierfacile.logement.gouv.fr/" target="_blank" rel="noopener noreferrer">DossierFacile</a> (service public, gratuit) et colle ici le lien qu'il te donne : il sera ajouté à tes messages. Tes documents ne passent jamais par l'appli.</p>
       <div class="dlg-actions"><button class="btn ghost" value="cancel" formnovalidate>Annuler</button><button class="btn primary" value="ok">Enregistrer</button></div>
     </form>
   </dialog>
@@ -110,12 +112,16 @@
     </div>
   </dialog>
 
+  <dialog id="dlg-contacts" aria-label="Contacter mes favoris">
+    <div class="dlg wide" id="contacts-corps"></div>
+  </dialog>
+
   <div id="mascotte-bulle" class="mascotte-bulle" hidden role="status"></div>
 
   <!-- Versions : NE PAS éditer à la main. `node scripts/version-site.mjs` réécrit ce bloc, le ?v= de app.js et celui de
        app.css (empreinte du contenu de chaque fichier), sans quoi un appareil peut rester bloqué sur une vieille version
        (GitHub Pages met tout en cache 10 min, Safari bien plus longtemps). test/site-version.test.mjs échoue si on l'oublie. -->
-  <script type="importmap">{"imports":{"./agent-ui.mjs":"./agent-ui.mjs?v=9c151cf2","./js/annonce-ui.mjs":"./js/annonce-ui.mjs?v=70374c64","./js/cartes.mjs":"./js/cartes.mjs?v=2257c790","./js/chat.mjs":"./js/chat.mjs?v=3f33e804","./js/criteres.mjs":"./js/criteres.mjs?v=fcbccd92","./js/dialogs.mjs":"./js/dialogs.mjs?v=a89a45b9","./js/etat.mjs":"./js/etat.mjs?v=52ba87da","./js/filtres.mjs":"./js/filtres.mjs?v=06d203d7","./js/mascotte.mjs":"./js/mascotte.mjs?v=deb43cf9","./js/toast.mjs":"./js/toast.mjs?v=260c953b","./js/util.mjs":"./js/util.mjs?v=cf4383a2","./js/vues.mjs":"./js/vues.mjs?v=24311654","./score.mjs":"./score.mjs?v=1f891d2e"}}</script>
-  <script type="module" src="app.js?v=74e46d4e"></script>
+  <script type="importmap">{"imports":{"./agent-ui.mjs":"./agent-ui.mjs?v=96188875","./js/annonce-ui.mjs":"./js/annonce-ui.mjs?v=70374c64","./js/cartes.mjs":"./js/cartes.mjs?v=85e5cbae","./js/chat.mjs":"./js/chat.mjs?v=3f33e804","./js/contacts.mjs":"./js/contacts.mjs?v=d80fa935","./js/criteres.mjs":"./js/criteres.mjs?v=fcbccd92","./js/dialogs.mjs":"./js/dialogs.mjs?v=a89a45b9","./js/etat.mjs":"./js/etat.mjs?v=4ea4df63","./js/filtres.mjs":"./js/filtres.mjs?v=06d203d7","./js/mascotte.mjs":"./js/mascotte.mjs?v=276688ef","./js/toast.mjs":"./js/toast.mjs?v=260c953b","./js/util.mjs":"./js/util.mjs?v=cf4383a2","./js/vues.mjs":"./js/vues.mjs?v=9851c25a","./score.mjs":"./score.mjs?v=1f891d2e"}}</script>
+  <script type="module" src="app.js?v=e8fb9ecd"></script>
 </body>
 </html>

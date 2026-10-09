@@ -57,12 +57,20 @@ export function brancherMascotte() {
   // Premier contact : une seule fois, on se présente et on explique la transparence avec Sacha.
   if (!store.get('bulleAccueilVue', false)) {
     store.set('bulleAccueilVue', true);
+    store.set('bulleOuverturesVue', true); // le texte d'accueil le dit déjà
     setTimeout(() => montrerBulle(
-      "Coucou, c'est moi ! Tu peux tout me demander pour ajuster tes critères. Ce qu'on se dit ici, et tes ♥/✕/notes, Sacha les voit aussi pour adapter le site pour toi.",
+      "Coucou, c'est moi ! Tu peux tout me demander pour ajuster tes critères. Ce qu'on se dit ici, tes ♥/✕/notes et quand tu ouvres l'appli, Sacha les voit aussi pour adapter le site pour toi.",
       [
         { texte: 'Compris, on discute', primaire: true, action: () => ouvrirBot() },
         { texte: 'Plus tard', action: () => setTimeout(proposerBulleInstall, 1000) },
       ],
+    ), 1200);
+  } else if (!store.get('bulleOuverturesVue', false)) {
+    // Changement de ce que Sacha voit (09/10/2026) : on le dit une fois, sur chaque appareil déjà utilisé.
+    store.set('bulleOuverturesVue', true);
+    setTimeout(() => montrerBulle(
+      "Du nouveau ! « Contacter mes favoris » (onglet Favoris) prépare un message pour chacun, et « Nouveautés » montre ce qui est arrivé depuis ta dernière visite. Pour ça, Sacha voit maintenant aussi quand tu ouvres l'appli (rien d'autre, et jamais ton dossier).",
+      [{ texte: 'Compris', primaire: true, action: () => {} }, { texte: 'Voir mes favoris', action: () => { location.hash = '#/favoris'; } }],
     ), 1200);
   } else {
     setTimeout(proposerBulleInstall, 1500);

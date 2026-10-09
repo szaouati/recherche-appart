@@ -14,7 +14,11 @@ export const MARQUEURS = {
   situation: 'situation',
   telephone: 'téléphone',
   disponibilites: 'disponibilités',
+  lien_dossier: 'lien vers mon dossier',
 };
+// Marqueurs facultatifs : s'ils ne sont pas renseignés, la LIGNE qui les contient disparaît (au lieu d'un
+// « [à compléter] ») — ex. le lien DossierFacile, que tout le monde n'a pas.
+export const MARQUEURS_OPTIONNELS = ['lien_dossier'];
 
 /**
  * Remplace {{prenom}}, {{situation}}… par le contenu de « Mon dossier » (stocké UNIQUEMENT sur l'appareil).
@@ -23,7 +27,10 @@ export const MARQUEURS = {
  */
 export function remplirMarqueurs(message, dossier = {}) {
   const manquants = new Set();
-  const texte = String(message ?? '').replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (t, k) => {
+  const vide = (k) => !String(dossier?.[k] ?? '').trim();
+  const lignes = String(message ?? '').split('\n')
+    .filter((l) => !MARQUEURS_OPTIONNELS.some((k) => vide(k) && new RegExp(`\\{\\{\\s*${k}\\s*\\}\\}`, 'i').test(l)));
+  const texte = lignes.join('\n').replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (t, k) => {
     const cle = k.toLowerCase();
     if (!(cle in MARQUEURS)) return '';
     const v = String(dossier?.[cle] ?? '').trim();
@@ -32,6 +39,31 @@ export function remplirMarqueurs(message, dossier = {}) {
     return `[à compléter : ${MARQUEURS[cle]}]`;
   });
   return { texte, manquants: [...manquants] };
+}
+
+/**
+ * Brouillon de premier contact rédigé SANS le modèle (instantané, gratuit), pour « Contacter mes favoris ».
+ * a : { type, quartier, surface, prix, etage, ascenseur, dpe } déjà mis en forme par l'appelant ; seules les
+ * infos manquantes de l'annonce deviennent des questions. Renvoie un texte à marqueurs (cf. remplirMarqueurs).
+ */
+export function brouillonContact(a) {
+  const quoi = [a.type || 'logement', a.surface ? `de ${a.surface} m²` : null, a.quartier ? `(${a.quartier})` : null, a.prix != null ? `à ${Math.round(a.prix)} €` : null].filter(Boolean).join(' ');
+  const manque = [a.etage == null ? "l'étage" : null, a.etage != null && a.etage > 1 && a.ascenseur == null ? "s'il y a un ascenseur" : null, a.dpe ? null : 'le DPE'].filter(Boolean);
+  const questions = ['à partir de quand il est disponible', ...manque];
+  const liste = questions.length > 1 ? `${questions.slice(0, -1).join(', ')} et ${questions.at(-1)}` : questions[0];
+  return [
+    'Bonjour,',
+    '',
+    `Votre annonce pour le ${quoi} m'intéresse beaucoup.`,
+    "Je m'appelle {{prenom}} : {{situation}}.",
+    `Pourriez-vous me dire ${liste} ?`,
+    'Je serais ravie de le visiter : je suis disponible {{disponibilites}}.',
+    'Mon dossier complet : {{lien_dossier}}',
+    'Vous pouvez me joindre au {{telephone}}.',
+    '',
+    'Bien cordialement,',
+    '{{prenom}}',
+  ].join('\n');
 }
 
 const echapperIcs = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');

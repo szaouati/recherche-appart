@@ -22,6 +22,30 @@ export const S = {
   erreurChargement: false,
 };
 
+// --- Visites (propres à CET appareil) -----------------------------------------------------------------
+// « Nouveautés » = ce qui est arrivé depuis la visite précédente sur cet appareil (une visite se termine après
+// 30 min sans utiliser l'appli). Ce n'est volontairement PAS partagé : Sacha qui ouvre l'appli sur son ordinateur
+// ne doit pas faire disparaître les nouveautés de Tabatha. Le bouton « Tout marquer comme vu » (vuJusqua,
+// partagé) reste respecté : on prend le plus récent des deux.
+const PAUSE_VISITE = 30 * 60e3;
+export const appareil = (() => {
+  let id = store.get('appareil', null);
+  if (!id) { id = Math.random().toString(36).slice(2, 8); store.set('appareil', id); }
+  return id;
+})();
+S.seuilVisite = null; // fin de la visite précédente sur cet appareil (ISO), null au tout premier passage
+export const seuilNouveautes = () => (S.seuilVisite && S.seuilVisite > S.vuJusqua ? S.seuilVisite : S.vuJusqua);
+
+/** Démarre une nouvelle visite si la précédente est finie (renvoie vrai dans ce cas). */
+function debuterVisiteSiBesoin(maintenant = Date.now()) {
+  const avant = store.get('derniereActivite', null);
+  store.set('derniereActivite', maintenant);
+  if (avant && maintenant - avant < PAUSE_VISITE) return false;
+  S.seuilVisite = avant ? new Date(avant).toISOString() : null;
+  return true;
+}
+const noterActivite = () => store.set('derniereActivite', Date.now());
+
 let etatSnapshot = null;
 const ecouteurs = new Set();
 export const surChangement = (fn) => { ecouteurs.add(fn); return () => ecouteurs.delete(fn); };
@@ -174,11 +198,42 @@ export async function chargerTout() {
   emit('charge');
 }
 
+/**
+ * Ouverture de l'appli → journal partagé (type « ouverture »), une fois par visite : Sacha voit si elle passe,
+ * même sans rien toucher. Rien de personnel : un identifiant d'appareil tiré au hasard (affiché dans « Plus »
+ * pour que Sacha reconnaisse le sien), téléphone ou ordinateur, appli installée ou non, venue de Telegram ou non.
+ * Annoncé dans l'appli (bulle de la mascotte, écran « Plus ») : ne pas l'élargir sans mettre ces textes à jour.
+ */
+function signalerOuverture(source = null) {
+  envoyerEvenement('ouverture', {
+    appareil,
+    ecran: matchMedia('(max-width: 767px)').matches ? 'mobile' : 'ordinateur',
+    installee: window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches,
+    ...(source ? { source } : {}),
+  });
+}
+
+/**
+ * Appelé au démarrage, AVANT le premier rendu : ouvre la visite (seuil des nouveautés). Renvoie la fonction qui la
+ * consigne, à appeler une fois config.json chargé (sans jeton, rien ne part). ?src=tg = arrivée depuis Telegram.
+ */
+export function demarrerVisite() {
+  const src = new URLSearchParams(location.search).get('src');
+  if (src) history.replaceState(null, '', location.pathname + location.hash); // pas de ?src= dans un lien partagé ensuite
+  const nouvelle = debuterVisiteSiBesoin();
+  return () => { if (nouvelle || src) signalerOuverture(src === 'tg' ? 'telegram' : null); };
+}
+
 /** Resynchronisation régulière pendant que l'onglet est visible, et tout de suite en y revenant. */
 export function demarrerSynchro() {
-  setInterval(() => { if (document.visibilityState === 'visible') synchroniserEtat({ silencieux: true }); }, 25_000);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') synchroniserEtat({ silencieux: true }); });
+  setInterval(() => { if (document.visibilityState === 'visible') { noterActivite(); synchroniserEtat({ silencieux: true }); } }, 25_000);
+  const retour = () => {
+    if (debuterVisiteSiBesoin()) { signalerOuverture(); emit('etat'); } // revenue après une longue pause : nouvelles « Nouveautés »
+    synchroniserEtat({ silencieux: true });
+  };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') retour(); else noterActivite(); });
   // Safari restaure très souvent un onglet depuis son cache mémoire (bfcache) sans requête réseau : « pageshow »
   // avec persisted=true est le seul signal fiable de ce cas précis (retour sur l'appli) → resynchronisation immédiate.
-  window.addEventListener('pageshow', (e) => { if (e.persisted) synchroniserEtat({ silencieux: true }); });
+  window.addEventListener('pageshow', (e) => { if (e.persisted) retour(); });
+  window.addEventListener('pagehide', noterActivite);
 }

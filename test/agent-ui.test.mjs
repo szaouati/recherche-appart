@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { IDEES_QUESTIONS, formaterReponse, remplirMarqueurs, construireIcs, relanceDue, libelleRelance, STATUTS_LIBELLES } from '../docs/agent-ui.mjs';
+import { IDEES_QUESTIONS, formaterReponse, remplirMarqueurs, construireIcs, relanceDue, libelleRelance, STATUTS_LIBELLES, brouillonContact } from '../docs/agent-ui.mjs';
 
 test('remplirMarqueurs : remplace par « Mon dossier », signale ce qui manque, n\'invente rien', () => {
   const { texte, manquants } = remplirMarqueurs('Bonjour, je suis {{situation}}. Merci, {{prenom}} — {{telephone}} — {{iban}}', { prenom: 'Tabatha', situation: 'étudiante en master' });
@@ -64,4 +64,24 @@ test('idées de questions : thèmes non vides, aucune question en double', () =>
   assert.equal(new Set(toutes).size, toutes.length);
   for (const q of ['Où j\'en suis de mes recherches ?', 'Qui a répondu à mes demandes ?', 'C\'est quand mes prochains rendez-vous ?']) assert.ok(toutes.includes(q));
   assert.ok(toutes.every((q) => q.length <= 120 && q.endsWith('?') || !q.endsWith('?')));
+});
+
+test('remplirMarqueurs : un lien de dossier absent fait disparaître sa ligne, pas de « [à compléter] »', () => {
+  const msg = 'Bonjour\nMon dossier complet : {{lien_dossier}}\n{{prenom}}';
+  assert.deepEqual(remplirMarqueurs(msg, { prenom: 'T' }), { texte: 'Bonjour\nT', manquants: [] });
+  assert.equal(remplirMarqueurs(msg, { prenom: 'T', lien_dossier: 'https://df.test/x' }).texte, 'Bonjour\nMon dossier complet : https://df.test/x\nT');
+});
+
+test('brouillonContact : décrit l\'annonce, ne questionne que sur ce qui manque, marqueurs seulement', () => {
+  const b = brouillonContact({ type: 'studio', quartier: 'Goutte d\'Or', surface: 18, prix: 750, etage: null, ascenseur: null, dpe: null });
+  assert.match(b, /pour le studio de 18 m² \(Goutte d'Or\) à 750 €/);
+  assert.match(b, /disponible, l'étage et le DPE \?/);
+  const complet = brouillonContact({ type: '2 pièces', surface: 30, prix: 900, etage: 4, ascenseur: true, dpe: 'C' });
+  assert.match(complet, /me dire à partir de quand il est disponible \?/);
+  assert.match(brouillonContact({ type: 'studio', etage: 5, ascenseur: null, dpe: 'D' }), /s'il y a un ascenseur/);
+  const marqueurs = [...b.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]);
+  assert.deepEqual([...new Set(marqueurs)].sort(), ['disponibilites', 'lien_dossier', 'prenom', 'situation', 'telephone']);
+  const { texte, manquants } = remplirMarqueurs(b, { prenom: 'Tabatha', situation: 'étudiante', telephone: '06', disponibilites: 'le soir' });
+  assert.deepEqual(manquants, []);
+  assert.ok(!/\{\{|lien|dossier complet/i.test(texte));
 });

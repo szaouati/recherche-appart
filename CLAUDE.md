@@ -34,6 +34,12 @@ que de cache d'appoint par appareil (clés `*Cache`), jamais de source de vérit
 | `docs/app.js` + `docs/js/*.mjs` + `docs/app.css` | Le site (front refondu le 24/09/2026, voir § « Front du site ») | — |
 | `samples/` (gitignored) | E-mails d'alerte PAP/SeLoger/Leboncoin, pour construire l'analyseur | Sacha, ou lu directement dans `alertes.appart.tabatha@gmail.com` via le connecteur Gmail de la session (vérifier que c'est bien ce compte avant toute lecture) |
 
+Depuis le 09/10/2026, le journal reçoit aussi `type:'ouverture'` (une par visite = après 30 min d'inactivité) :
+`payload {appareil, ecran, installee, source?}`. `appareil` = identifiant tiré au hasard, affiché dans l'écran « Plus »
+(« Cet appareil : #xxxx ») pour distinguer le téléphone de Tabatha de l'ordinateur de Sacha ; `source:'telegram'` = arrivée
+par le bouton « 📱 Dans l'appli » d'une carte Telegram (`?src=tg`). « Nouveautés » / badge Nouveau = depuis la visite
+précédente **sur cet appareil** (localStorage `derniereActivite`), ou `vuJusqua` partagé s'il est plus récent.
+
 `docs/data/journal.json` reste l'historique (append-only, jamais rejoué) ; `docs/data/etat.json`
 est l'état COURANT (une seule valeur par clé). **Lire le journal avant de répondre à Sacha sur "où
 elle en est"**, mais lire `etat.json` (ou `criteria.json`) pour savoir ce qui est vrai *maintenant*.
@@ -58,6 +64,7 @@ natifs, vanilla). Maquettes et générateur : `design/` (`node design/build-maqu
 | `docs/js/annonce-ui.mjs` | Fonctions **pures** d'affichage (quartier, type, étage, badges…) — testées (`test/annonce-ui.test.mjs`) |
 | `docs/js/filtres.mjs` | Filtres/tri d'**affichage** (pastilles, feuille « Filtres », tris) — fonctions pures testées (`test/filtres.test.mjs`). Locaux à l'appareil, **non sauvegardés** (un filtre oublié ne doit jamais cacher des annonces au lancement suivant) ; ≠ critères de recherche (partagés, `score.mjs`). Donnée absente ⇒ ne satisfait jamais un filtre |
 | `docs/js/chat.mjs` | Chat « Demander à Claude » + cartes de propositions (le bot ne modifie jamais rien seul) |
+| `docs/js/contacts.mjs` | « ✉️ Contacter mes favoris » (onglet Favoris, ajouté le 09/10/2026) : un brouillon **local** (`brouillonContact`, sans modèle) par favori pas encore contacté → Copier / Ouvrir / « J'ai envoyé ✔ » (suivi `contacte` + relance 3 j) |
 | `docs/js/criteres.mjs`, `dialogs.mjs`, `mascotte.mjs`, `toast.mjs`, `util.mjs` | Formulaire critères ; ajout manuel + « Mon dossier » ; bulles ; toasts ; utilitaires |
 | `docs/app.css` | Design system : jetons (§1, clair/sombre), composants, `prefers-reduced-motion`. `docs/style.css` = ancienne feuille, **utilisée seulement par `avis.html`** |
 
@@ -192,6 +199,8 @@ générateur de critères. Détail et coûts : README.md § « L'agent du chat �
   `etat.json`/`criteria.json` sans validation de sa part.
 - **Prise de contact = brouillon + copie + « J'ai envoyé ✔ »**, jamais d'envoi automatique (captcha/connexion, règles non
   négociables). Les brouillons n'utilisent que les marqueurs `{{prenom}} {{situation}} {{telephone}} {{disponibilites}}`.
+- **Marqueurs** : `{{prenom}} {{situation}} {{telephone}} {{disponibilites}} {{lien_dossier}}` ; `lien_dossier` (lien
+  DossierFacile) est facultatif : vide, sa ligne disparaît du message. Les pièces justificatives ne passent jamais par l'appli.
 - **« 👤 Mon dossier » est local à l'appareil** (localStorage `dossier`) : jamais envoyé au Worker, au journal ni au dépôt
   (public). Le journal `contact` ne stocke que id + statut. Ne jamais faire transiter ces infos par le Worker.
 - **Suivi de contact partagé** : `etat.json` → `contacts[id] = {statut, maj, relance, visite, note, canal}` (action
@@ -207,6 +216,9 @@ générateur de critères. Détail et coûts : README.md § « L'agent du chat �
 Choix de Sacha : résumés **matin + soir** (9 h et 19 h, `TELEGRAM_HEURES`), envoyés **directement à Tabatha** (sans
 relecture de Sacha), **l'appli reste en parallèle**. Détail technique : README.md § « Bot Telegram ».
 
+- Un résumé n'envoie que des annonces vues depuis moins de 7 jours (`AGE_MAX_RESUME`), jamais déjà envoyées (KV
+  `envoyes`) ni déjà données dans un top 10 WhatsApp (journal `top10_envoye`, lu par `idsDejaSignales`). Chaque carte a
+  ♥ / ✕ / 🔗 Voir l'annonce / 📱 Dans l'appli.
 - Même agent, mêmes règles : le bot ne modifie rien sans un tap sur « ✔ Appliquer » ; jamais d'envoi de message
   à un propriétaire ; « Mon dossier » ne passe jamais par Telegram (les brouillons gardent les `{{…}}`).
 - Lire ses échanges Telegram : journal, entrées `kind:'chat', canal:'telegram'` (`qui:'sacha'` = essais de Sacha,

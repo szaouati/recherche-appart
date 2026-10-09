@@ -81,7 +81,7 @@ async function appendJournal(env, entry) {
   }
 }
 
-const TYPES_EVENEMENT = ['fav', 'ecarte', 'note', 'critere_change', 'ajout_manuel', 'avis', 'contact'];
+const TYPES_EVENEMENT = ['fav', 'ecarte', 'note', 'critere_change', 'ajout_manuel', 'avis', 'contact', 'ouverture'];
 
 // --- État partagé (favoris/écartés/notes/annonces manuelles) -----------------------------------
 // Un Worker Cloudflare réutilise le même module (donc les mêmes objets au niveau module) entre
@@ -312,6 +312,10 @@ function outilsTelegram(env, ctx) {
     traiterEtat: (body) => traiterEtat(env, ctx, body),
     appendJournal: (entry) => appendJournal(env, entry),
     chargerDonnees: () => chargerDonneesAgent(env),
+    idsDejaSignales: async () => {
+      const { data } = await lireJSON(env, env.JOURNAL_PATH || 'docs/data/journal.json', { entries: [] });
+      return (Array.isArray(data.entries) ? data.entries : []).filter((x) => ['top10_envoye', 'telegram_envoye'].includes(x.kind)).flatMap((x) => x.ids ?? []);
+    },
     lireCriteres: async () => (await lireJSON(env, env.CRITERIA_PATH || 'docs/criteria.json', {})).data,
     appelerModele: creerAppelAnthropic(env),
   };

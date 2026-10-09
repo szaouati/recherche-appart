@@ -3,7 +3,7 @@
 import { esc, safeUrl, eur, depuis } from './util.mjs';
 import { STATUTS_LIBELLES, relanceDue, libelleRelance } from '../agent-ui.mjs';
 import { verdictScore } from '../score.mjs';
-import { S } from './etat.mjs';
+import { S, seuilNouveautes } from './etat.mjs';
 import { quartier, ligneInfos, surfaceLibelle, typeLogement, baissePrix, teinte, badgesEquipements, sourceAffichee } from './annonce-ui.mjs';
 
 const ICONES = {
@@ -13,7 +13,7 @@ const ICONES = {
 };
 export { ICONES };
 
-export const estNouveau = (l) => l.first_seen > S.vuJusqua && l.source !== 'Manuel';
+export const estNouveau = (l) => l.first_seen > seuilNouveautes() && l.source !== 'Manuel';
 
 /** Tuile de remplacement (sans photo, ou photo cassée) : surface en grand + type de logement. */
 export function tuile(l) {

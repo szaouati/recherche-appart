@@ -22,6 +22,7 @@ const TTL_HISTORIQUE = 7 * 864e2; // secondes
 const TTL_PROPOSITION = 14 * 864e2;
 const TTL_CARTE = 30 * 864e2;
 const MAX_ENVOYES = 3000;
+export const AGE_MAX_RESUME = 7 * 864e5;
 export const STATUTS_LIBELLES = { a_contacter: 'à contacter', contacte: 'contactée', reponse: 'réponse reçue', visite: 'visite prévue', refuse: 'refusé', sans_suite: 'sans suite' };
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -115,8 +116,11 @@ export function texteCarte(l, c, n) {
   return [tete, lieu, `✨ ${esc(traits.join(' · '))}`, alertes.length ? `⚠️ ${esc(alertes.join(' ; '))}` : ''].filter(Boolean).join('\n');
 }
 
+// Lien vers la fiche dans l'appli (photos, suivi, « Contacter ») ; ?src=tg dit à l'appli qu'elle vient d'ici.
+export const lienAppli = (env, id) => `${String(env.SITE_URL || 'https://szaouati.github.io/recherche-appart/').replace(/[?#].*$/, '')}?src=tg#/annonce/${encodeURIComponent(id)}`;
+
 async function claviersCarte(env, l, statut) {
-  const lien = l.url ? [{ text: '🔗 Voir l’annonce', url: l.url }] : [];
+  const lien = [...(l.url ? [{ text: '🔗 Voir l’annonce', url: l.url }] : []), { text: '📱 Dans l’appli', url: lienAppli(env, l.id) }];
   if (statut === 'fav') return { inline_keyboard: [[{ text: '♥ Gardée · annuler', callback_data: await cb(env, 's:0', l.id) }], lien].filter((r) => r.length) };
   if (statut === 'ecarte') return { inline_keyboard: [[{ text: '✕ Écartée · annuler', callback_data: await cb(env, 's:0', l.id) }], lien].filter((r) => r.length) };
   return { inline_keyboard: [[{ text: '♥ Garder', callback_data: await cb(env, 's:f', l.id) }, { text: '✕ Écarter', callback_data: await cb(env, 's:e', l.id) }], lien].filter((r) => r.length) };
@@ -139,8 +143,13 @@ async function envoyerCarte(env, chat, l, c, n) {
 export async function envoyerResume(env, o, chat, { marquer, moment = 'maintenant', silencieuxSiVide = false, maintenant = Date.now() }) {
   const c = construireContexte(await o.chargerDonnees(), maintenant);
   const deja = new Set((await kvLire(env, 'envoyes')) ?? []);
+  // Déjà signalées ailleurs (top 10 WhatsApp de Sacha, résumés d'avant le KV) : lues dans le journal.
+  for (const id of (await o.idsDejaSignales?.().catch(() => [])) ?? []) deja.add(id);
   const max = Math.max(1, Math.min(10, Number(env.TELEGRAM_MAX_PAR_RESUME) || 5));
-  const choix = c.ok.filter((l) => !c.e.statut[l.id] && !deja.has(l.id)).slice(0, max);
+  // « Nouvelles annonces » : vues par le bot depuis moins de AGE_MAX_RESUME (une annonce manuelle de trois semaines
+  // n'a rien de nouveau, et a toutes les chances d'être déjà louée).
+  const recente = (l) => maintenant - Date.parse(l.first_seen ?? 0) < AGE_MAX_RESUME;
+  const choix = c.ok.filter((l) => !c.e.statut[l.id] && !deja.has(l.id) && recente(l)).slice(0, max);
   if (!choix.length) {
     if (!silencieuxSiVide) await envoyer(env, chat, 'Rien de neuf depuis le dernier envoi ✨ Je te préviens dès qu’une annonce tombe.');
     return [];

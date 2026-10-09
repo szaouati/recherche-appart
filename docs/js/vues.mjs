@@ -1,9 +1,10 @@
 // Écrans du site (chaque fonction renvoie du HTML ; app.js s'occupe du routage et des événements).
 import { STATUTS_LIBELLES, relanceDue, libelleRelance } from '../agent-ui.mjs';
 import { esc, safeUrl, eur, depuis } from './util.mjs';
-import { S, visible, annonceParId } from './etat.mjs';
+import { S, visible, annonceParId, seuilNouveautes, appareil } from './etat.mjs';
 import { carte, squeletteCartes, visuel, badges, verdictDe, boutonCoeur, ICONES } from './cartes.mjs';
 import { htmlCriteres } from './criteres.mjs';
+import { favorisAContacter } from './contacts.mjs';
 import { PASTILLES, TRIS, filtresVides, nbFiltres, appliquer, compter, trier, bornes } from './filtres.mjs';
 import { quartier, typeLogement, etageLibelle, prixM2, surfaceLibelle, sourceAffichee, infosLoyer, historiquePrix } from './annonce-ui.mjs';
 
@@ -12,7 +13,7 @@ const ctxFiltres = () => ({ contacts: S.contacts });
 
 // --- Sélections ------------------------------------------------------------
 const retenues = () => S.ranked.filter((l) => l.ok && visible(l) && S.statut[l.id] !== 'ecarte');
-export const nouvelles = () => retenues().filter((l) => l.first_seen > S.vuJusqua);
+export const nouvelles = () => { const seuil = seuilNouveautes(); return retenues().filter((l) => l.first_seen > seuil); };
 export const favoris = () => S.ranked.filter((l) => S.statut[l.id] === 'fav');
 export const ecartees = () => S.ranked.filter((l) => S.statut[l.id] === 'ecarte');
 export const relancesDues = () => Object.values(S.contacts).filter((c) => relanceDue(c)).length;
@@ -94,7 +95,10 @@ export function htmlFiltres() {
 export function vueFavoris() {
   if (!S.charge) return `<ul class="liste">${squeletteCartes(2)}</ul>`;
   const f = favoris();
+  const aContacter = favorisAContacter(f).length;
   return `<h2 class="titre-ecran">Mes favoris</h2>
+    ${aContacter ? `<button class="btn primary cf-ouvrir" type="button" data-contacter-favoris>✉️ Contacter mes favoris (${aContacter})</button>
+      <p class="hint">Un message prêt pour chacun, à copier dans la messagerie de l'annonce. Les réponses se suivent dans l'onglet Suivi.</p>` : ''}
     ${f.length ? `<ul class="liste">${f.slice(0, ui.limite).map(carte).join('')}</ul>` : vide('Aucun favori pour l\'instant', 'Touche le ♥ d\'une annonce pour la garder ici.', '<a class="btn" href="#/">Voir les annonces</a>')}`;
 }
 
@@ -154,7 +158,9 @@ export function vuePlus() {
     </div>
     <h3 class="groupe-titre">Sources</h3>
     <div class="sources">${pillsSources()}</div>
-    <p class="maj">${S.meta.generatedAt ? `Dernière mise à jour ${esc(depuis(S.meta.generatedAt))}.` : ''}</p>`;
+    <p class="maj">${S.meta.generatedAt ? `Dernière mise à jour ${esc(depuis(S.meta.generatedAt))}.` : ''}</p>
+    <h3 class="groupe-titre">Ce que Sacha voit</h3>
+    <p class="hint">Tes échanges avec Claude (ici et sur Telegram), tes ♥ / ✕, tes notes, tes critères, tes démarches, et quand tu ouvres l'appli (sans rien de personnel). Jamais « Mon dossier », qui reste sur ce téléphone. Cet appareil : <span class="appareil-id">#${esc(appareil)}</span>.</p>`;
 }
 
 export function vueEcartees() {

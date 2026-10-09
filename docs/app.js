@@ -1,11 +1,12 @@
 // Point d'entrée : routage (#/…), événements délégués, en-tête, barre d'onglets. L'état vit dans js/etat.mjs,
 // les écrans dans js/vues.mjs, les cartes dans js/cartes.mjs, le chat dans js/chat.mjs.
 import { $, $$, eur, depuis } from './js/util.mjs';
-import { S, surChangement, emit, chargerTout, demarrerSynchro, appliquerEtat, annonceParId } from './js/etat.mjs';
+import { S, surChangement, emit, chargerTout, demarrerSynchro, demarrerVisite, appliquerEtat, annonceParId } from './js/etat.mjs';
 import { ui, htmlFiltres, majFeuilleFiltres, listesAnnonces, listeSuivi, ecartees, vueAnnonces, vueFavoris, vueSuivi, vuePlus, vueEcartees, vueCriteres, vueDetail, favoris, relancesDues, resumeCriteres, nouvelles } from './js/vues.mjs';
 import { remplirFormulaire, brancherCriteres, formulaireActif } from './js/criteres.mjs';
 import { brancherBot, ouvrirBot, envoyerBot, copier } from './js/chat.mjs';
 import { brancherDialogs, ouvrirAjout, ouvrirDossier } from './js/dialogs.mjs';
+import { brancherContacts, ouvrirContacts } from './js/contacts.mjs';
 import { brancherMascotte, proposerBulleCriteres } from './js/mascotte.mjs';
 import { toast } from './js/toast.mjs';
 import { quartier } from './js/annonce-ui.mjs';
@@ -194,6 +195,7 @@ document.addEventListener('click', (e) => {
   if (t('[data-bot-relances]') || t('#relances')) { ouvrirBot(); envoyerBot('Qui dois-je relancer, et avec quel message ?'); return; }
   if (t('[data-ajout]')) { ouvrirAjout(); return; }
   if (t('[data-dossier]')) { ouvrirDossier(); return; }
+  if (t('[data-contacter-favoris]')) { ouvrirContacts(favoris()); return; }
   if (t('[data-recharger]')) location.reload();
 });
 
@@ -273,9 +275,12 @@ async function demarrer() {
   brancherCriteres({ proposerBulle: proposerBulleCriteres });
   brancherBot();
   brancherDialogs();
+  brancherContacts();
   brancherMascotte();
   emit('init'); // classe le cache local et affiche les squelettes pendant le chargement
+  const consignerOuverture = demarrerVisite(); // avant le premier rendu : fixe le seuil des « Nouveautés »
   await chargerTout();
+  consignerOuverture();
   demarrerSynchro();
 }
 demarrer();
