@@ -32,25 +32,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790233633642",
-      "source": "Manuel",
-      "url": "https://www.leboncoin.fr/ad/locations/3275595375",
-      "title": "Leboncoin — 850€, 20m², 1p — La Fourche-Guy Moquet",
-      "price": 850,
-      "surface": 20,
-      "rooms": 1,
-      "arrondissement": 18,
-      "floor": 5,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-24T07:07:13.642Z",
-      "last_seen": "2026-09-24T07:07:13.642Z",
-      "publishedAt": "2026-09-24T07:07:13.642Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790178435018",
       "source": "Manuel",
       "url": "https://www.seloger.com/classified-search?distributionTypes=Rent&estateTypes=Apartment&locations=POCOFR4812&priceMax=900",
@@ -359,9 +340,10 @@
     "sl:26WF5AYKMMDH",
     "pap:465400898",
     "sl:26EFZEE7G3EL",
-    "lbc:3275548024"
+    "lbc:3275548024",
+    "lbc:3275595375"
   ],
   "contacts": {},
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-10-09T14:38:24.390Z"
+  "updatedAt": "2026-10-09T14:38:30.094Z"
 }
