@@ -32,25 +32,6 @@
       "photo": null
     },
     {
-      "id": "manuel:1790233636590",
-      "source": "Manuel",
-      "url": "https://www.leboncoin.fr/ad/locations/3275548024",
-      "title": "Leboncoin — 695€, 13m², 1p — Montmartre-Sacré Coeur-Abbesses, dernier étage",
-      "price": 695,
-      "surface": 13,
-      "rooms": 1,
-      "arrondissement": 18,
-      "floor": 6,
-      "elevator": null,
-      "dpe": null,
-      "furnished": null,
-      "features": {},
-      "first_seen": "2026-09-24T07:07:16.590Z",
-      "last_seen": "2026-09-24T07:07:16.590Z",
-      "publishedAt": "2026-09-24T07:07:16.590Z",
-      "photo": null
-    },
-    {
       "id": "manuel:1790233633642",
       "source": "Manuel",
       "url": "https://www.leboncoin.fr/ad/locations/3275595375",
@@ -377,9 +358,10 @@
     "sl:26UN9BSFB757",
     "sl:26WF5AYKMMDH",
     "pap:465400898",
-    "sl:26EFZEE7G3EL"
+    "sl:26EFZEE7G3EL",
+    "lbc:3275548024"
   ],
   "contacts": {},
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-10-09T14:38:19.237Z"
+  "updatedAt": "2026-10-09T14:38:24.390Z"
 }
