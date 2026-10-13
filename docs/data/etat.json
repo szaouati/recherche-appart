@@ -16,7 +16,8 @@
     "leboncoin:3283234081": "ecarte",
     "pap:465602740": "ecarte",
     "seloger:26RWML4TKREN": "ecarte",
-    "seloger:26GYUD5TRCBC": "fav"
+    "seloger:26GYUD5TRCBC": "fav",
+    "bienici:hektor-axihome-448": "ecarte"
   },
   "notes": {},
   "manuel": [
@@ -172,5 +173,5 @@
   ],
   "contacts": {},
   "vuJusqua": "2026-09-22T10:57:07.199Z",
-  "updatedAt": "2026-10-13T17:36:40.033Z"
+  "updatedAt": "2026-10-13T17:40:40.799Z"
 }
