@@ -3197,6 +3197,15 @@
         "pap:405001133"
       ],
       "moment": "soir"
+    },
+    {
+      "ts": "2026-10-13T07:00:32.724Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "seloger:265AR61IN2S8",
+        "seloger:26J7TN5HMTGG"
+      ],
+      "moment": "matin"
     }
   ]
 }
