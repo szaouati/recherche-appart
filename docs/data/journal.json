@@ -3674,6 +3674,15 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-10-14T07:00:41.218Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "leboncoin:3287893379",
+        "leboncoin:3287572746"
+      ],
+      "moment": "matin"
     }
   ]
 }
