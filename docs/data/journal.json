@@ -3738,6 +3738,16 @@
         "alerteActive": true,
         "alerteScoreMin": 66
       }
+    },
+    {
+      "ts": "2026-10-15T17:00:42.718Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "pap:435200081",
+        "seloger:269BWGI9JM99",
+        "seloger:26Q7TBYIQSLX"
+      ],
+      "moment": "soir"
     }
   ]
 }
