@@ -3760,6 +3760,17 @@
         "leboncoin:3288967203"
       ],
       "moment": "matin"
+    },
+    {
+      "ts": "2026-10-16T17:01:04.219Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "pap:465701584",
+        "seloger:268GHKQ5RHY5",
+        "seloger:26YTVNQB6ULA",
+        "seloger:26148CDSIL74"
+      ],
+      "moment": "soir"
     }
   ]
 }
