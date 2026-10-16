@@ -3748,6 +3748,18 @@
         "seloger:26Q7TBYIQSLX"
       ],
       "moment": "soir"
+    },
+    {
+      "ts": "2026-10-16T07:00:27.116Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "leboncoin:3289093409",
+        "leboncoin:3288844036",
+        "leboncoin:3288923162",
+        "leboncoin:3288822172",
+        "leboncoin:3288967203"
+      ],
+      "moment": "matin"
     }
   ]
 }
