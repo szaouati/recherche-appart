@@ -3781,6 +3781,14 @@
         "leboncoin:3289157943"
       ],
       "moment": "matin"
+    },
+    {
+      "ts": "2026-10-17T17:00:39.121Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "seloger:26MKN19FH3ZU"
+      ],
+      "moment": "soir"
     }
   ]
 }
