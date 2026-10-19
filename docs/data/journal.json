@@ -3850,6 +3850,15 @@
         "seloger:263ER6M9PJVZ"
       ],
       "moment": "soir"
+    },
+    {
+      "ts": "2026-10-19T17:00:48.502Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "pap:417700742",
+        "seloger:25NCI6693CWC"
+      ],
+      "moment": "soir"
     }
   ]
 }
