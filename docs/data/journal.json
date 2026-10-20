@@ -3870,6 +3870,15 @@
         "seloger:2673575TGW67"
       ],
       "moment": "matin"
+    },
+    {
+      "ts": "2026-10-20T17:00:46.979Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "seloger:26FKUQGD88AL",
+        "seloger:26S2U4UL1YSR"
+      ],
+      "moment": "soir"
     }
   ]
 }
