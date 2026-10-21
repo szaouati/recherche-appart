@@ -3879,6 +3879,15 @@
         "seloger:26S2U4UL1YSR"
       ],
       "moment": "soir"
+    },
+    {
+      "ts": "2026-10-21T07:00:20.944Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "bienici:century-21-202_3048_28043",
+        "seloger:26KD1XYIJ4SS"
+      ],
+      "moment": "matin"
     }
   ]
 }
