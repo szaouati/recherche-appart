@@ -3888,6 +3888,15 @@
         "seloger:26KD1XYIJ4SS"
       ],
       "moment": "matin"
+    },
+    {
+      "ts": "2026-10-21T17:00:21.117Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "leboncoin:3291996064",
+        "seloger:26L2GW4YNSF4"
+      ],
+      "moment": "soir"
     }
   ]
 }
