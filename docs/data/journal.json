@@ -3897,6 +3897,14 @@
         "seloger:26L2GW4YNSF4"
       ],
       "moment": "soir"
+    },
+    {
+      "ts": "2026-10-22T07:00:42.224Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "seloger:26JBTHBD5T1G"
+      ],
+      "moment": "matin"
     }
   ]
 }
