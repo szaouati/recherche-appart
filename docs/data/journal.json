@@ -3905,6 +3905,16 @@
         "seloger:26JBTHBD5T1G"
       ],
       "moment": "matin"
+    },
+    {
+      "ts": "2026-10-22T17:00:48.465Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "seloger:26VYWCUJKU3A",
+        "seloger:269M6ME185SJ",
+        "bienici:gedeon-34101812"
+      ],
+      "moment": "soir"
     }
   ]
 }
