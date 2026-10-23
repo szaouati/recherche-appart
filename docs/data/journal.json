@@ -3915,6 +3915,14 @@
         "bienici:gedeon-34101812"
       ],
       "moment": "soir"
+    },
+    {
+      "ts": "2026-10-23T07:00:41.450Z",
+      "kind": "telegram_envoye",
+      "ids": [
+        "seloger:26VNCC7I4QS8"
+      ],
+      "moment": "matin"
     }
   ]
 }
